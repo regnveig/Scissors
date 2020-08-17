@@ -1,0 +1,163 @@
+{
+	"GenomeAssembly": "hg19",
+	"Reference": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.fa",
+	"GATKCondaEnv": "/dev/datasets/FairWind/_tools/gatk_conda/bin/activate gatk",
+	"GATK_ConfigFile": "config/GATK_config.txt",
+	"AnnoFitConfig": "config/AnnoFit_config.json",
+	"AnnofitChunkSize": 300000,
+	"HGMDPath": "db/HGMD.tsv",
+	"FastQSampleSize": 1000000,
+	"Threads": 10,
+	"dbSNP": "/dev/datasets/FairWind/_db/dbsnp/dbsnp151_filtered.vcf.gz",
+	"AnnovarFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar",
+	"AnnovarDBFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
+	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
+	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
+	"NotCapture": "/dev/datasets/FairWind/_db/hg19_canonic/NOT_MedExome_hg19_canonic.bed",
+	"AnnovarDatabases": [
+		{
+			"Protocol": "refGene",
+			"Operation": "g",
+			"Comment": "FASTA sequences for all annotated transcripts in RefSeq Gene",
+			"Database": "refGene"
+		},
+		{
+			"Protocol": "knownGene",
+			"Operation": "g",
+			"Comment": "FASTA sequences for all annotated transcripts in UCSC Known Gene",
+			"Database": "knownGene"
+		},
+		{
+			"Protocol": "ensGene",
+			"Operation": "g",
+			"Comment": "FASTA sequences for all annotated transcripts in Gencode v31 Basic collection",
+			"Database": "ensGene"
+		},
+		{
+			"Protocol": "dbnsfp35c",
+			"Operation": "f",
+			"Comment": "whole-exome SIFT, PolyPhen2 HDIV, PolyPhen2 HVAR, LRT, MutationTaster, MutationAssessor, FATHMM, PROVEAN, MetaSVM, MetaLR, VEST, M-CAP, CADD, GERP++, DANN, fathmm-MKL, Eigen, GenoCanyon, fitCons, PhyloP and SiPhy scores from dbNSFP version 3.5c, suitable for commercial use",
+			"Database": "dbnsfp35c"
+		},
+		{
+			"Protocol": "dbscsnv11",
+			"Operation": "f",
+			"Comment": "dbscSNV version 1.1 for splice site prediction by AdaBoost and Random Forest",
+			"Database": "dbscsnv11"
+		},
+		{
+			"Protocol": "intervar_20180118",
+			"Operation": "f",
+			"Comment": "InterVar: clinical interpretation of missense variants (indels not supported)",
+			"Database": "intervar_20180118"
+		},
+		{
+			"Protocol": "gnomad211_genome",
+			"Operation": "f",
+			"Comment": "gnomAD exome collection (v2.1.1), with \"AF AF_popmax AF_male AF_female AF_raw AF_afr AF_sas AF_amr AF_eas AF_nfe AF_fin AF_asj AF_oth non_topmed_AF_popmax non_neuro_AF_popmax non_cancer_AF_popmax controls_AF_popmax\" header",
+			"Database": "gnomad211_genome"
+		},
+		{
+			"Protocol": "gene4denovo201907",
+			"Operation": "f",
+			"Comment": "gene4denovo database",
+			"Database": "gene4denovo201907"
+		},
+		{
+			"Protocol": "kaviar_20150923",
+			"Operation": "f",
+			"Comment": "170 million Known VARiants from 13K genomes and 64K exomes in 34 projects",
+			"Database": "kaviar_20150923"
+		},
+		{
+			"Protocol": "hrcr1",
+			"Operation": "f",
+			"Comment": "40 million variants from 32K samples in haplotype reference consortium",
+			"Database": "hrcr1"
+		},
+		{
+			"Protocol": "abraom",
+			"Operation": "f",
+			"Comment": "2.3 million Brazilian genomic variants",
+			"Database": "abraom"
+		},
+		{
+			"Protocol": "ALL.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "AFR.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)", 
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "AMR.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "EUR.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "EAS.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "SAS.sites.2015_08",
+			"Operation": "f",
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
+			"Database": "1000g2015aug"
+		},
+		{
+			"Protocol": "gme",
+			"Operation": "f",
+			"Comment": "Great Middle East allele frequency including NWA (northwest Africa), NEA (northeast Africa), AP (Arabian peninsula), Israel, SD (Syrian desert), TP (Turkish peninsula) and CA (Central Asia)",
+			"Database": "gme"
+		},
+		{
+			"Protocol": "esp6500siv2_all",
+			"Operation": "f",
+			"Comment": "alternative allele frequency in All subjects in the NHLBI-ESP project with 6500 exomes, including the indel calls and the chrY calls. This is lifted over from hg19 by myself.", 
+			"Database": "esp6500siv2_all"
+		},
+		{
+			"Protocol": "avsnp150",
+			"Operation": "f",
+			"Comment": "dbSNP150 with allelic splitting and left-normalization",
+			"Database": "avsnp150"
+		},
+		{
+			"Protocol": "clinvar_20200316",
+			"Operation": "f",
+			"Comment": "Clinvar version 20200316 with separate columns (CLNALLELEID CLNDN CLNDISDB CLNREVSTAT CLNSIG)",
+			"Database": "clinvar_20200316"
+		},
+		{
+			"Protocol": "regsnpintron",
+			"Operation": "f",
+			"Comment": "prioritize the disease-causing probability of intronic SNVs",
+			"Database": "regsnpintron"
+		},
+		{
+			"Protocol": "revel",
+			"Operation": "f",
+			"Comment": "REVEL scores for non-synonymous variants",
+			"Database": "revel"
+		},
+		{
+			"Protocol": "gwava",
+			"Operation": "f",
+			"Comment": "whole genome GWAVA_region_score and GWAVA_tss_score (GWAVA_unmatched_score has bug in file)",
+			"Database": "gwava"
+		}
+	]
+}

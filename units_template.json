@@ -1,0 +1,25 @@
+[
+	{
+		"ID": "",
+		"Input": [
+			{
+				"Type": "fastq",
+				"R1": "",
+				"R2": "",
+				"Sample": "",
+				"Library": "",
+				"RG": null
+			},
+			{
+				"Type": "fastq",
+				"R1": "",
+				"R2": "",
+				"Sample": "",
+				"Library": "",
+				"RG": null
+			}
+		],
+		"OutputDir": "",
+		"Stage": 0
+	}
+]

@@ -1,0 +1,41 @@
+#!/bin/python3
+
+__author__ = "regnveig"
+__version__ = "0.2b"
+__date__ = "2020 Jul 23"
+
+import argparse
+import sys
+
+from src.SharedFunctions import *
+from src.Initialization import *
+from src.DaemonicPipe import *
+from src.AnnoFit import *
+
+CurrentDir = os.path.dirname(sys.argv[0])
+
+def CreateParser():
+	Parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=f"Scissors: Pipeline for Exome Sequence Analysis", epilog=f"Email: regnveig@ya.ru")
+	Parser.add_argument('--version', action='version', version=__version__)
+	Subparsers = Parser.add_subparsers(title='Commands', dest='command')
+	
+	# DaemonicPipe
+	DaemonicPipeParser = Subparsers.add_parser('DaemonicPipe', help=f"Aligning, Removing Duplicates, Recalibration & Variant Calling")
+	DaemonicPipeParser.add_argument('-c', '--config', default=os.path.join(CurrentDir, "config/DaemonicPipeline_config.json"), help=f"Pipeline Config File (default: config/DaemonicPipeline_config.json)")
+	DaemonicPipeParser.add_argument('-u', '--units', required=True, help=f"Units File in JSON format")
+	
+	# AnnoPipe
+	AnnoPipeParser = Subparsers.add_parser('AnnoPipe', help=f"Annotation & Filtering Variants")
+	AnnoPipeParser.add_argument('-c', '--config', default=os.path.join(CurrentDir, "config/DaemonicPipeline_config.json"), help=f"Pipeline Config File (default: config/DaemonicPipeline_config.json)")
+	AnnoPipeParser.add_argument('-u', '--units', required=True, help=f"Units File in JSON format")
+	
+	return Parser
+
+if __name__ == '__main__':
+	
+	Parser = CreateParser()
+	Namespace = Parser.parse_args(sys.argv[1:])
+	
+	if Namespace.command == "DaemonicPipe": DaemonicPipe(Namespace.config, Namespace.units)
+	elif Namespace.command == "AnnoPipe": AnnoPipe(Namespace.config, Namespace.units)
+	else: Parser.print_help()
