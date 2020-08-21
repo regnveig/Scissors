@@ -267,6 +267,8 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 	
 	StartTime = time.time()
 	Result["avsnp150"] = Result["avsnp150"].parallel_apply(lambda x: '.' if x == '.' else f"=HYPERLINK(\"https://www.ncbi.nlm.nih.gov/snp/{x}\", \"{x}\")")
+	Result["UCSC"] = Result[["Chr", "Start", "End"]].parallel_apply(lambda x: f"=HYPERLINK(\"https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position={x['Chr']}%3A{str(x['Start'])}%2D{str(x['End'])}\", \"{x['Chr']}:{str(x['Start'])}\")", axis=1)
+	Result["AnnoFit.GeneName"] = Result["AnnoFit.GeneName"].apply(lambda x: '.' if x == '.' else f"=HYPERLINK(\"https://www.genecards.org/Search/Keyword?queryString={'%20OR%20'.join(['%5Baliases%5D(%20' + str(item) + '%20)' for item in x.split(';')])}&keywords={','.join([str(item) for item in x.split(';')])}\", \"{x}\")")
 	OMIM_links = pandas.DataFrame(GenesTable[["pLi", "Disease_description"]].parallel_apply(FindOMIMCodes, axis=1).to_list()).set_index("Name").fillna('.')
 	del OMIM_links.index.name
 	GenesTable = pandas.concat([GenesTable, OMIM_links], axis=1, sort=False)

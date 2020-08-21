@@ -37,6 +37,6 @@
 	"ExonicFunc_filter": ["frameshift insertion", "startloss", "stoploss", "stopgain", "frameshift deletion"],
 	"ncRNA_filter": ["ncRNA_splicing", "ncRNA_intronic", "ncRNA_exonic"],
 	"Splicing_filter": ["splicing"],
-	"FinalVariant": ["Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "HGMD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.ExonNumber", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "InterVar_automated", "CLNSIG", "VCF.GT", "Annofit.Compound", "pLi", "Gene_full_name", "Function_description", "Disease_description"],
+	"FinalVariant": ["UCSC", "Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "HGMD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.ExonNumber", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "InterVar_automated", "CLNSIG", "VCF.GT", "Annofit.Compound", "pLi", "Gene_full_name", "Function_description", "Disease_description"],
 	"ShortGenesTable": ["#Gene_name", "pLi", "Gene_full_name", "Function_description", "Disease_description", "Tissue_specificity(Uniprot)", "Expression(egenetics)", "Expression(GNF/Atlas)"]
 } 

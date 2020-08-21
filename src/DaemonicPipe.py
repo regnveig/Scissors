@@ -3,6 +3,12 @@ from src.SharedFunctions import *
 
 ## ------======| PIPELINE STAGES |======------
 
+def Cutadapt(Logger):
+	
+	MODULE_NAME = "Cutadapt"
+	
+	# TODO
+
 def BamMetrics(BamMetricsFile):
 	pass # TODO
 

@@ -5,10 +5,10 @@ from src.Initialization import *
 from src.DaemonicPipe import *
 from src.AnnoFit import *
 
-PipelineConfig = json.load(open("/dev/datasets/FairWind/.cloud/core/scepter/tools/Scissors/config/DaemonicPipeline_config.json", 'rt'))
+PipelineConfig = json.load(open("/dev/datasets/FairWind/.cloud/core/labjournal/tools/Scissors/config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
 
-AnnoFit("/dev/datasets/FairWind/_results/Quarantine_BGI/DCAHM10-QUAR10/IRs/DCAHM10-QUAR10.annovar.tsv", "/_home/_temp/DCAHM10-QUAR10.test.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=12)
+AnnoFit("/dev/datasets/FairWind/_results/Quarantine_BGI/DCAHM10-QUAR10/IRs/test.tsv", "/_home/_temp/DCAHM10-QUAR10.test.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=12)
 
 # gatk FastqToSam -F {R1} -F2 {R2} -O {uBAM} --SAMPLE_NAME S1
 # gatk MarkIlluminaAdapters -I {uBAM} --M {MarkAdaptersMetrics} -O {uBAMxt}
