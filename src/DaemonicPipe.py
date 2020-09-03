@@ -3,11 +3,38 @@ from src.SharedFunctions import *
 
 ## ------======| PIPELINE STAGES |======------
 
-def Cutadapt(Logger):
+def Solid2Illumina(InputFQ, OutputFQ, Threads, Logger):
+	
+	MODULE_NAME = "Solid2Illumina"
+	
+	# Logging
+	Logger.info(f"Input FASTQ: {InputFQ}")
+	Logger.info(f"Output FASTQ: {OutputFQ}")
+	
+	# Processing
+	SimpleSubprocess(f"{MODULE_NAME}.Convert", f"cutadapt -j {str(Threads)} -c --format=sra-fastq --bwa --action=none -o \"{OutputFQ}\" \"{InputFQ}\"", Logger)
+	
+def Cutadapt(InputR1, InputR2, OutputR1, OutputR2, Adapter, ReportTXT, Threads, Logger):
 	
 	MODULE_NAME = "Cutadapt"
 	
-	# TODO
+	# Logging
+	if InputR2 is not None:
+		Logger.info(f"Mode: Paired-end")
+		Logger.info(f"Input FASTQ [R1]: {InputR1}")
+		Logger.info(f"Input FASTQ [R2]: {InputR2}")
+		Logger.info(f"Output FASTQ [R1]: {OutputR1}")
+		Logger.info(f"Output FASTQ [R2]: {OutputR2}")
+	else:
+		Logger.info(f"Mode: Single-end")
+		Logger.info(f"Input FASTQ: {InputR1}")
+		Logger.info(f"Output FASTQ: {OutputR1}")
+	
+	Logger.info(f"Adapter: {Adapter['Name']}")
+	
+	# Processing
+	if InputR2 is not None: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -m 8 -a {Adapter['R1']} -A {Adapter['R2']} -o \"{OutputR1}\" -p \"{OutputR2}\" \"{InputR1}\" \"{InputR2}\" > \"{ReportTXT}\"", Logger)
+	else: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -m 8 -a {Adapter['R1']} -o \"{OutputR1}\" \"{InputR1}\" > \"{ReportTXT}\"", Logger)
 
 def BamMetrics(BamMetricsFile):
 	pass # TODO
@@ -334,11 +361,15 @@ def DaemonicPipe(PipelineConfigFile, UnitsFile):
 		
 		if Unit["Stage"] == 2:
 			
-			# Align & Merge
+			# Trim & Align & Merge
 			with tempfile.TemporaryDirectory() as TempDir:
 				Shards = []
 				for index, item in enumerate(Unit["Input"]):
 					if item["Type"] == "fastq":
+						if item["Format"] == 'illumina': pass
+						elif item["Format"] == 'solid': 
+						TempR1, TempR2 = item["R1"], item["R2"]
+						if item["Adapter"] is not None: 
 						OutputBAM = os.path.join(TempDir, f"temp_{str(index)}.bam")
 						BWA(item["R1"], item["R2"], PipelineConfig["Reference"], item["RG"], OutputBAM, Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
 						Shards += [ OutputBAM ]
