@@ -3,7 +3,7 @@ from src.SharedFunctions import *
 
 ## ------======| PIPELINE STAGES |======------
 
-def Solid2Illumina(InputFQ, OutputFQ, Threads, Logger):
+def Solid2Illumina(InputFQ, OutputFQ, Logger):
 	
 	MODULE_NAME = "Solid2Illumina"
 	
@@ -12,7 +12,7 @@ def Solid2Illumina(InputFQ, OutputFQ, Threads, Logger):
 	Logger.info(f"Output FASTQ: {OutputFQ}")
 	
 	# Processing
-	SimpleSubprocess(f"{MODULE_NAME}.Convert", f"cutadapt -j {str(Threads)} -c --format=sra-fastq --bwa --action=none -o \"{OutputFQ}\" \"{InputFQ}\"", Logger)
+	SimpleSubprocess(f"{MODULE_NAME}.Convert", f"cutadapt -c --format=sra-fastq --bwa --action=none -o \"{OutputFQ}\" \"{InputFQ}\"", Logger)
 	
 def Cutadapt(InputR1, InputR2, OutputR1, OutputR2, Adapter, ReportTXT, Threads, Logger):
 	
@@ -33,8 +33,8 @@ def Cutadapt(InputR1, InputR2, OutputR1, OutputR2, Adapter, ReportTXT, Threads, 
 	Logger.info(f"Adapter: {Adapter['Name']}")
 	
 	# Processing
-	if InputR2 is not None: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -m 8 -a {Adapter['R1']} -A {Adapter['R2']} -o \"{OutputR1}\" -p \"{OutputR2}\" \"{InputR1}\" \"{InputR2}\" > \"{ReportTXT}\"", Logger)
-	else: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -m 8 -a {Adapter['R1']} -o \"{OutputR1}\" \"{InputR1}\" > \"{ReportTXT}\"", Logger)
+	if InputR2 is not None: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -e 0.2 -m 8 -a {Adapter['R1']} -A {Adapter['R2']} -o \"{OutputR1}\" -p \"{OutputR2}\" \"{InputR1}\" \"{InputR2}\" > \"{ReportTXT}\"", Logger)
+	else: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -e 0.2 -m 8 -a {Adapter['R1']} -o \"{OutputR1}\" \"{InputR1}\" > \"{ReportTXT}\"", Logger)
 
 def BamMetrics(BamMetricsFile):
 	pass # TODO
@@ -361,19 +361,34 @@ def DaemonicPipe(PipelineConfigFile, UnitsFile):
 		
 		if Unit["Stage"] == 2:
 			
-			# Trim & Align & Merge
 			with tempfile.TemporaryDirectory() as TempDir:
 				Shards = []
 				for index, item in enumerate(Unit["Input"]):
 					if item["Type"] == "fastq":
-						if item["Format"] == 'illumina': pass
-						elif item["Format"] == 'solid': 
+						
 						TempR1, TempR2 = item["R1"], item["R2"]
-						if item["Adapter"] is not None: 
+						
+						# Convert SOLiD
+						if item["Format"] == 'solid':
+							_TempR1, _TempR2 = os.path.join(TempDir, f"solid2illumina_R1_{str(index)}.fastq.gz"), None if item["R2"] is None else os.path.join(TempDir, f"solid2illumina_R2_{str(index)}.fastq.gz")
+							Solid2Illumina(TempR1, _TempR1, Logger)
+							if item["R2"] is not None: Solid2Illumina(TempR2, _TempR2, Logger)
+							TempR1, TempR2 = _TempR1, _TempR2
+						
+						# Trim
+						if item["Adapter"] is not None:
+							ReportTXT = os.path.join(Unit['OutputDir'], f"{Unit['ID']}.InputItem{str(index)}.cutadapt.txt")
+							_TempR1, _TempR2 = os.path.join(TempDir, f"adapter_R1_{str(index)}.fastq.gz"), None if item["R2"] is None else os.path.join(TempDir, f"adapter_R2_{str(index)}.fastq.gz")
+							Cutadapt(TempR1, TempR2, _TempR1, _TempR2, PipelineConfig["Adapters"][item["Adapter"]], ReportTXT, PipelineConfig["Threads"], Logger)
+							TempR1, TempR2 = _TempR1, _TempR2
+						
+						# Align
 						OutputBAM = os.path.join(TempDir, f"temp_{str(index)}.bam")
-						BWA(item["R1"], item["R2"], PipelineConfig["Reference"], item["RG"], OutputBAM, Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
+						BWA(TempR1, TempR2, PipelineConfig["Reference"], item["RG"], OutputBAM, Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
 						Shards += [ OutputBAM ]
 					if item["Type"] == "bam": pass # TODO
+				
+				# Merge & Copy
 				if len(Shards) > 1: MergeBAMs(Shards, FileNames["PrimaryBAM"], "queryname", Logger, PipelineConfig["GATKCondaEnv"])
 				else: SimpleSubprocess(f"{MODULE_NAME}.CopyBAM", f"cp \"{Shards[0]}\" \"{FileNames['PrimaryBAM']}\"", Logger)
 				SimpleSubprocess(f"{MODULE_NAME}.FlagStats", f"samtools flagstat \"{FileNames['PrimaryBAM']}\" > \"{FileNames['PrimaryStats']}\"", Logger)

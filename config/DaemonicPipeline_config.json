@@ -14,6 +14,9 @@
 	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
 	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
 	"NotCapture": "/dev/datasets/FairWind/_db/hg19_canonic/NOT_MedExome_hg19_canonic.bed",
+	"Adapters": {
+		"illumina": {"Name": "illumina", "R1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA", "R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"}
+	},
 	"AnnovarDatabases": [
 		{
 			"Protocol": "refGene",
