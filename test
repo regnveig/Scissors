@@ -12,9 +12,9 @@ Logger = DefaultLogger("/dev/null")
 
 #for item in lst: CoverageStats(f"{item}.FR300", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.sorted.bam", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
 
-ANNOVAR("/dev/datasets/FairWind/_results/JulyThirteen_BGI/20-22_intersect/0000.vcf", "/dev/datasets/FairWind/_results/JulyThirteen_BGI/20-22_intersect/0000.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
+ANNOVAR("/dev/datasets/FairWind/_results/Quarantine_BGI/intersect_6-7/0000.vcf", "/dev/datasets/FairWind/_results/Quarantine_BGI/intersect_6-7/0000.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
 
-AnnoFit("/dev/datasets/FairWind/_results/JulyThirteen_BGI/20-22_intersect/0000.tsv", "/dev/datasets/FairWind/_results/JulyThirteen_BGI/20-22_intersect/0000.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
+AnnoFit("/dev/datasets/FairWind/_results/Quarantine_BGI/intersect_6-7/0000.tsv", "/dev/datasets/FairWind/_results/Quarantine_BGI/intersect_6-7/0000.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
 
 # gatk FastqToSam -F {R1} -F2 {R2} -O {uBAM} --SAMPLE_NAME S1
 # gatk MarkIlluminaAdapters -I {uBAM} --M {MarkAdaptersMetrics} -O {uBAMxt}
