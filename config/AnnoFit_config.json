@@ -28,7 +28,7 @@
 	"ConservationTH": 0.7,
 	"OtherInfo": {"Otherinfo9": "VCF.QUAL", "Otherinfo12": "VCF.FORMAT", "Otherinfo13": "VCF.SAMPLE"},
 	"ShortVariant": ["Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.ExonNumber", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "Interpro_domain", "GTEx_V6p_gene", "GTEx_V6p_tissue", "InterVar_automated", "DN ID", "Patient ID", "Phenotype", "Platform", "Study", "Pubmed ID", "CLNALLELEID", "CLNDN", "CLNDISDB", "CLNREVSTAT", "CLNSIG", "VCF.GT"],
-	"PopMax_filter": 0.03,
+	"PopMax_filter": 0.2,
 	"ExonPredThreshold": 3,
 	"SplicePred_filter": ["D"],
 	"IntronPred_filter": ["D", "PD"],
