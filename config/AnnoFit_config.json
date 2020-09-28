@@ -10,7 +10,7 @@
 	},
 	"IntergeneSynonims": ["intergenic", "upstream", "downstream"],
 	"ExonicFunc": ["ExonicFunc.refGene", "ExonicFunc.knownGene", "ExonicFunc.ensGene"],
-	"ExonNumber": ["GeneDetail.refGene", "AAChange.refGene", "GeneDetail.knownGene", "AAChange.knownGene", "GeneDetail.ensGene", "AAChange.ensGene"],
+	"Details": ["GeneDetail.refGene", "AAChange.refGene", "GeneDetail.knownGene", "AAChange.knownGene", "GeneDetail.ensGene", "AAChange.ensGene"],
 	"dbscSNV": ["dbscSNV_ADA_SCORE", "dbscSNV_RF_SCORE"],
 	"SymbolPred": [
 		{"Name": "SIFT_pred", "Symbols": {"D": "D", "T": "T"}},
@@ -27,8 +27,8 @@
 	"ConservationRS": ["integrated_fitCons_score_rankscore", "GERP++_RS_rankscore", "phyloP100way_vertebrate_rankscore", "phyloP20way_mammalian_rankscore", "phastCons100way_vertebrate_rankscore", "phastCons20way_mammalian_rankscore", "SiPhy_29way_logOdds_rankscore"],
 	"ConservationTH": 0.7,
 	"OtherInfo": {"Otherinfo9": "VCF.QUAL", "Otherinfo12": "VCF.FORMAT", "Otherinfo13": "VCF.SAMPLE"},
-	"ShortVariant": ["Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.ExonNumber", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "Interpro_domain", "GTEx_V6p_gene", "GTEx_V6p_tissue", "InterVar_automated", "DN ID", "Patient ID", "Phenotype", "Platform", "Study", "Pubmed ID", "CLNALLELEID", "CLNDN", "CLNDISDB", "CLNREVSTAT", "CLNSIG", "VCF.GT"],
-	"PopMax_filter": 0.2,
+	"ShortVariant": ["Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.Details", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "Interpro_domain", "GTEx_V6p_gene", "GTEx_V6p_tissue", "InterVar_automated", "DN ID", "Patient ID", "Phenotype", "Platform", "Study", "Pubmed ID", "CLNALLELEID", "CLNDN", "CLNDISDB", "CLNREVSTAT", "CLNSIG", "VCF.GT"],
+	"PopMax_filter": 0.03,
 	"ExonPredThreshold": 3,
 	"SplicePred_filter": ["D"],
 	"IntronPred_filter": ["D", "PD"],
@@ -37,6 +37,6 @@
 	"ExonicFunc_filter": ["frameshift insertion", "startloss", "stoploss", "stopgain", "frameshift deletion"],
 	"ncRNA_filter": ["ncRNA_splicing", "ncRNA_intronic", "ncRNA_exonic"],
 	"Splicing_filter": ["splicing"],
-	"FinalVariant": ["UCSC", "Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "HGMD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.ExonNumber", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "InterVar_automated", "CLNSIG", "VCF.GT", "Annofit.Compound", "pLi", "Gene_full_name", "Function_description", "Disease_description"],
+	"FinalVariant": ["UCSC", "Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "HGMD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.Details", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "InterVar_automated", "CLNSIG", "VCF.GT", "Annofit.Compound", "pLi", "Gene_full_name", "Function_description", "Disease_description"],
 	"ShortGenesTable": ["#Gene_name", "pLi", "Gene_full_name", "Function_description", "Disease_description", "Tissue_specificity(Uniprot)", "Expression(egenetics)", "Expression(GNF/Atlas)"]
 } 

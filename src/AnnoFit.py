@@ -54,10 +54,9 @@ def RefMerge(Series):
 	Genes = list(set([item for sublist in Genes for item in sublist]))
 	return ';'.join(sorted(Genes)) if Genes else '.'
 
-def ExonNumber(Series):
-	Exones = ';'.join([item for item in Series.to_list() if ((type(item) is str) and (item != "."))])
-	Exones = list(set(re.findall( r'exon(\d+)', Exones)))
-	return ';'.join(sorted(Exones, key=lambda x: int(x))) if Exones else '.'
+def Details(Series):
+	lst = [item for item in Series.to_list() if ((type(item) is str) and (item != "."))]
+	return '.' if not lst else ';'.join(lst)
 
 def REVEL(Value):
 	try:
@@ -171,7 +170,7 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 		Data["AnnoFit.GeneName"] = Data[Config["GeneNames"]].parallel_apply(RefMerge, axis=1) # Gene Names
 		Data["AnnoFit.Func"] = Data[Config["Func"]].parallel_apply(RefMerge, axis=1) # Gene Func
 		Data["AnnoFit.ExonicFunc"] = Data[Config["ExonicFunc"]].parallel_apply(RefMerge, axis=1) # Gene Exonic Func
-		Data["AnnoFit.ExonNumber"] = Data[Config["ExonNumber"]].parallel_apply(ExonNumber, axis=1) # Exon Numbers
+		Data["AnnoFit.Details"] = Data[Config["Details"]].parallel_apply(Details, axis=1) # Details
 		
 		# VCF Data
 		VCF_Metadata = pandas.DataFrame(Data[["VCF.FORMAT", "VCF.SAMPLE"]].parallel_apply(lambda x: VCF_Data({"Header": x["VCF.FORMAT"], "Data": x["VCF.SAMPLE"], "Name": x.name}), axis=1).to_list()).set_index("Name")
@@ -220,18 +219,18 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 		
 		StartTime = time.time()
 		DP_filter = Data["VCF.AD"].parallel_apply(Depths)
-		OMIM_filter = Data["Disease_description"].parallel_apply(lambda x: x != '.')
-		HGMD_filter = Data['HGMD'].parallel_apply(lambda x: x != '.')
-		PopMax_filter = Data["AnnoFit.PopFreqMax"] < Config["PopMax_filter"]
-		ExonPred_filter = Data["AnnoFit.ExonPred"].parallel_apply(lambda x: PredictionsThreshold(x, Config["ExonPredThreshold"]))
-		SplicePred_filter = Data["AnnoFit.SplicePred"].parallel_apply(lambda x: x in Config["SplicePred_filter"])
-		IntronPred_filter = Data["regsnp_disease"].parallel_apply(lambda x: x in Config["IntronPred_filter"])
-		Significance_filter = Data["InterVar_automated"].parallel_apply(lambda x: x in Config["InterVar_filter"])
-		CLINVAR_filter = Data["CLNSIG"].parallel_apply(lambda x: any([item in Config["CLINVAR_filter"] for item in str(x).split(',')]))
-		ExonicFunc_filter = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
-		ncRNA_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
-		Splicing_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
-		Data = Data[PopMax_filter & DP_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
+		#OMIM_filter = Data["Disease_description"].parallel_apply(lambda x: x != '.')
+		#HGMD_filter = Data['HGMD'].parallel_apply(lambda x: x != '.')
+		#PopMax_filter = Data["AnnoFit.PopFreqMax"] < Config["PopMax_filter"]
+		##ExonPred_filter = Data["AnnoFit.ExonPred"].parallel_apply(lambda x: PredictionsThreshold(x, Config["ExonPredThreshold"]))
+		#SplicePred_filter = Data["AnnoFit.SplicePred"].parallel_apply(lambda x: x in Config["SplicePred_filter"])
+		#IntronPred_filter = Data["regsnp_disease"].parallel_apply(lambda x: x in Config["IntronPred_filter"])
+		#Significance_filter = Data["InterVar_automated"].parallel_apply(lambda x: x in Config["InterVar_filter"])
+		#CLINVAR_filter = Data["CLNSIG"].parallel_apply(lambda x: any([item in Config["CLINVAR_filter"] for item in str(x).split(',')]))
+		##ExonicFunc_filter = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
+		#ncRNA_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
+		#Splicing_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
+		Data = Data[DP_filter] # & PopMax_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
 		Logger.info(f"Base filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 		
 		if Result is None: Result = Data
@@ -241,13 +240,14 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 
 	# Dominance Filtering
 	StartTime = time.time()
-	pLi_filter = Result["pLi"].parallel_apply(pLi)
-	OMIM_Dominance_filter = Result["Disease_description"].parallel_apply(lambda x: len(re.findall('[\W]dominant[\W]', str(x).lower())) != 0)
-	Zygocity_filter = Result["VCF.GT"].parallel_apply(lambda x: x == 'HOMO')
-	NoInfo_filter = Result["pLi"].parallel_apply(lambda x: x == '.') & (Result["Disease_description"].parallel_apply(lambda x: (x == '.') | (len(re.findall('([\W]dominant[\W])|([\W]recessive[\W])', str(x).lower())) != 0)))
+	#pLi_filter = Result["pLi"].parallel_apply(pLi)
+	#OMIM_Dominance_filter = Result["Disease_description"].parallel_apply(lambda x: len(re.findall('[\W]dominant[\W]', str(x).lower())) != 0)
+	#Zygocity_filter = Result["VCF.GT"].parallel_apply(lambda x: x == 'HOMO')
+	#NoInfo_filter = Result["pLi"].parallel_apply(lambda x: x == '.') & (Result["Disease_description"].parallel_apply(lambda x: (x == '.') | (len(re.findall('([\W]dominant[\W])|([\W]recessive[\W])', str(x).lower())) != 0)))
 	Result['Annofit.Compound'] = Result['AnnoFit.GeneName'].parallel_apply(lambda x: ';'.join([str(Result['AnnoFit.GeneName'].apply(lambda y: gene in y.split(';')).value_counts()[True]) for gene in x.split(';')]))
-	Compound_filter = Result['Annofit.Compound'].parallel_apply(lambda x: any([int(item) > 1 for item in x.split(';')]))
-	Result = Result[Compound_filter | pLi_filter | OMIM_Dominance_filter | Zygocity_filter | NoInfo_filter].sort_values(by=["Chr", "Start", "End"])
+	#Compound_filter = Result['Annofit.Compound'].parallel_apply(lambda x: any([int(item) > 1 for item in x.split(';')]))
+	#Result = Result[Compound_filter | pLi_filter | OMIM_Dominance_filter | Zygocity_filter | NoInfo_filter]
+	Result = Result.sort_values(by=["Chr", "Start", "End"])
 	
 	Logger.info(f"Filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 	

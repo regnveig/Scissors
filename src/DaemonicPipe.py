@@ -37,10 +37,12 @@ def Cutadapt(InputR1, InputR2, OutputR1, OutputR2, Adapter, ReportTXT, Threads, 
 	else: SimpleSubprocess(f"{MODULE_NAME}.Trim", f"cutadapt -j {str(Threads)} -e 0.2 -m 8 -a {Adapter['R1']} -o \"{OutputR1}\" \"{InputR1}\" > \"{ReportTXT}\"", Logger)
 
 def BamMetrics(BamMetricsFile):
+	with open(f"/dev/datasets/FairWind/_results/The_New_96/MISEQ_2020-{item}/MISEQ_2020-{item}.primary_stats.txt", 'rt') as f: buff = '::'.join([item[:-1] for item in f])
+	primary_stats = re.match("^(?P<TotalPassed>\\d+) \\+ (?P<TotalFailed>\\d+) in total \\(QC-passed reads \\+ QC-failed reads\\)::(?P<SecondaryPassed>\\d+) \\+ (?P<SecondaryFailed>\\d+) secondary::(?P<SupplementaryPassed>\\d+) \\+ (?P<SupplementaryFailed>\\d+) supplementary::(?P<DuplicatesPassed>\\d+) \\+ (?P<DuplicatesFailed>\\d+) duplicates::(?P<MappedPassed>\\d+) \\+ (?P<MappedFailed>\\d+) mapped.*::(?P<PairedPassed>\\d+) \\+ (?P<PairedFailed>\\d+) paired in sequencing::(?P<Read1Passed>\\d+) \\+ (?P<Read1Failed>\\d+) read1::(?P<Read2Passed>\\d+) \\+ (?P<Read2Failed>\\d+) read2::(?P<ProperlyPairedPassed>\\d+) \\+ (?P<ProperlyPairedFailed>\\d+) properly paired.*::(?P<BothMappedPassed>\\d+) \\+ (?P<BothMappedFailed>\\d+) with itself and mate mapped::(?P<SingletonsPassed>\\d+) \\+ (?P<SingletonsFailed>\\d+) singletons.*::(?P<MateOnDifferentChrPassed>\\d+) \\+ (?P<MateOnDifferentChrFailed>\\d+) with mate mapped to a different chr::(?P<MateOnDifferentChrMapQ5Passed>\\d+) \\+ (?P<MateOnDifferentChrMapQ5Failed>\\d+) with mate mapped to a different chr.*$", buff).groupdict()
 	pass # TODO
 
 def PercentMarkDupMetrics(MDMetricsFile):
-	for item in pandas.read_csv(MDMetricsFile, sep='\t', comment='#', chunksize=1): return item["PERCENT_DUPLICATION"]
+	for item in pandas.read_csv(MDMetricsFile, sep='\t', comment='#', chunksize=1): return item["PERCENT_DUPLICATION"][0]
 
 def CoverageStats(Name, FinalBAM, StatsTXT, CaptureBED, NotCaptureBED, Reference, Logger):
 	
