@@ -17,8 +17,8 @@ Logger = DefaultLogger("/dev/null")
 
 #for item in files:
 	#CoverageStats(os.path.basename(item), item, os.path.join(os.path.dirname(item), "new_stats.txt"), "/dev/datasets/FairWind/_db/DinaraPanel_sorted.bed", "/dev/datasets/FairWind/_db/NOTDinaraPanel_sorted.bed", PipelineConfig["Reference"], Logger)
-ANNOVAR("/dev/datasets/FairWind/_results/P11-12/P11_Sanger.vcf", "/dev/datasets/FairWind/_results/P11-12/P11_Sanger.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
-AnnoFit("/dev/datasets/FairWind/_results/P11-12/P11_Sanger.tsv", "/dev/datasets/FairWind/_results/P11-12/P11_Sanger.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
+ANNOVAR("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.sorted.vcf", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
+AnnoFit("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
 
 # gatk FastqToSam -F {R1} -F2 {R2} -O {uBAM} --SAMPLE_NAME S1
 # gatk MarkIlluminaAdapters -I {uBAM} --M {MarkAdaptersMetrics} -O {uBAMxt}
