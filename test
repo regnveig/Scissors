@@ -6,7 +6,7 @@ from src.DaemonicPipe import *
 from src.AnnoFit import *
 import glob
 
-#files = glob.glob("/_home/_results/The_New_96/MI**/*.final.bam")
+files = glob.glob("/dev/datasets/FairWind/_results/RichHedgehog/*sorted.bam")
 
 PipelineConfig = json.load(open("/dev/datasets/FairWind/.cloud/core/labjournal/tools/Scissors/config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
@@ -15,10 +15,10 @@ Logger = DefaultLogger("/dev/null")
 
 #for item in lst: CoverageStats(f"{item}.FR300", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.sorted.bam", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
 
-#for item in files:
-	#CoverageStats(os.path.basename(item), item, os.path.join(os.path.dirname(item), "new_stats.txt"), "/dev/datasets/FairWind/_db/DinaraPanel_sorted.bed", "/dev/datasets/FairWind/_db/NOTDinaraPanel_sorted.bed", PipelineConfig["Reference"], Logger)
-HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
-HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
+for item in files:
+	CoverageStats(os.path.basename(item), item, item + "stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
+#HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
+#HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
 
 #ANNOVAR("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.sorted.vcf", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
 #AnnoFit("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
