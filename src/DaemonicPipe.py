@@ -355,7 +355,7 @@ def DaemonicPipe(PipelineConfigFile, UnitsFile):
 			for item in Unit["Input"]:
 				if item["Type"] == "fastq":
 					ReadName = OpenAnyway(item["R1"], 'r', Logger).readline().decode('utf-8')[:-1]
-					item["RG"] = ComposeRGTag(ReadName, item["Sample"], item["Library"], Logger)
+					if item["RG"] is None: item["RG"] = ComposeRGTag(ReadName, item["Sample"], item["Library"], Logger)
 				if item["Type"] == "bam": pass # TODO
 			
 			Unit["Stage"] += 1
