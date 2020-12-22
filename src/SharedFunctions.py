@@ -72,8 +72,8 @@ def Threading(Name, Logger, Threads):
 	StartTime = time.time()
 	
 	# Pooling
-	pool = Pool(Threads)
-	yield pool
+	pool = Pool(11)
+	pool.map(functools.partial(ContigHaplotypeCalling, InputBAM=InputBAM, TempDir=TempDir, Reference=Reference, Logger=Logger, Env=Env), Contigs)
 	pool.close()
 	pool.join()
 	del pool
