@@ -4,19 +4,19 @@ from src.SharedFunctions import *
 from src.Initialization import *
 from src.DaemonicPipe import *
 from src.AnnoFit import *
-import glob
+#import glob
 
-files = glob.glob("/dev/datasets/FairWind/_results/RichHedgehog/*sorted.bam")
+#files = glob.glob("/dev/datasets/FairWind/_results/RichHedgehog/*sorted.bam")
 
 PipelineConfig = json.load(open("/dev/datasets/FairWind/.cloud/core/labjournal/tools/Scissors/config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
-
+PrepareReference("/dev/datasets/FairWind/_db/mm10/mm10.fa", Logger, PipelineConfig["GATKCondaEnv"])
 #lst = ["DCFED13-JULTH13", "DCMIH23-JULTH23", "DCSAN1-QUAR1", "DCVAS3-QUAR3"]
 
 #for item in lst: CoverageStats(f"{item}.FR300", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.sorted.bam", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
 
-for item in files:
-	CoverageStats(os.path.basename(item), item, item + "stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
+#for item in files:
+	#CoverageStats(os.path.basename(item), item, item + "stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
 #HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_HIC69-74/K562_HIC69-74.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
 #HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
 
