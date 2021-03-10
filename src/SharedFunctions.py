@@ -12,34 +12,31 @@ import os
 import pandas
 import pysam
 import re
+import statistics
 import subprocess
 import sys
 import tempfile
 import time
+from typing import Union
 import warnings
 
 
 ## ------======| LOGGING |======------
 
 def DefaultLogger(LogFileName):
-	
 	# Format
 	Formatter = "%(asctime)-30s%(levelname)-13s%(funcName)-25s%(message)s"
-	
 	# Compose logger
 	Logger = logging.getLogger("default_logger")
 	logging.basicConfig(level=logging.INFO, format=Formatter)
-	
 	# Add log file
 	Logger.handlers = []
 	LogFile = logging.FileHandler(LogFileName)
 	LogFile.setLevel(logging.INFO)
 	LogFile.setFormatter(logging.Formatter(Formatter))
 	Logger.addHandler(LogFile)
-	
 	# Return
 	return Logger
-
 
 ## ------======| SHARED |======------
 
