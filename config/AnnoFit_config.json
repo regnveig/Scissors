@@ -38,5 +38,67 @@
 	"ncRNA_filter": ["ncRNA_splicing", "ncRNA_intronic", "ncRNA_exonic"],
 	"Splicing_filter": ["splicing"],
 	"FinalVariant": ["UCSC", "Chr", "Start", "End", "Ref", "Alt", "VCF.QUAL", "VCF.DP", "VCF.AD", "HGMD", "avsnp150", "AnnoFit.GeneName", "AnnoFit.Func", "AnnoFit.ExonicFunc", "AnnoFit.Details", "AnnoFit.PopFreqMax", "non_topmed_AF_popmax", "non_neuro_AF_popmax", "non_cancer_AF_popmax", "controls_AF_popmax", "AnnoFit.ExonPred", "AnnoFit.SplicePred", "regsnp_disease", "regsnp_splicing_site", "AnnoFit.Conservation", "InterVar_automated", "CLNSIG", "VCF.GT", "Annofit.Compound", "pLi", "Gene_full_name", "Function_description", "Disease_description"],
-	"ShortGenesTable": ["#Gene_name", "pLi", "Gene_full_name", "Function_description", "Disease_description", "Tissue_specificity(Uniprot)", "Expression(egenetics)", "Expression(GNF/Atlas)"]
+	"ShortGenesTable": ["#Gene_name", "pLi", "Gene_full_name", "Function_description", "Disease_description", "Tissue_specificity(Uniprot)", "Expression(egenetics)", "Expression(GNF/Atlas)"],
+	"RegenomeAnnotation": [
+		{
+			"Filename": "db/ProblematicRegions/ENCODE_Blacklist.canonical.tsv",
+			"dbName": "ENCODE_Blacklist",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/GIAB_AlignProblem.canonical.tsv",
+			"dbName": "GIAB_AlignProblem",
+			"Type": "ucsc"
+		}],
+		"1": [{
+			"Filename": "db/ProblematicRegions/GIAB_AlleleImbalance.canonical.tsv",
+			"dbName": "GIAB_AlleleImbalance",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/GIAB_CallConflict.canonical.tsv",
+			"dbName": "GIAB_CallConflict",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/GIAB_FilterSSE.canonical.tsv",
+			"dbName": "GIAB_FilterSSE",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/GIAB_GenotypeConflict.canonical.tsv",
+			"dbName": "GIAB_GenotypeConflict",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/GIAB_QualityIssue.canonical.tsv",
+			"dbName": "GIAB_QualityIssue",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/NCBI_NGS_DeadZone.canonical.tsv",
+			"dbName": "NCBI_NGS_DeadZone",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/NCBI_NGS_HighStringency.canonical.tsv",
+			"dbName": "NCBI_NGS_HighStringency",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/NCBI_NGS_LowStringency.canonical.tsv",
+			"dbName": "NCBI_NGS_LowStringency",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/NCBI_Sanger_DeadZone.canonical.tsv",
+			"dbName": "NCBI_Sanger_DeadZone",
+			"Type": "ucsc"
+		},
+		{
+			"Filename": "db/ProblematicRegions/UCSC_UnusualRegions.canonical.tsv",
+			"dbName": "UCSC_UnusualRegions",
+			"Type": "ucsc"
+		}
+	]
 } 

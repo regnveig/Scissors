@@ -1,4 +1,5 @@
 from src.SharedFunctions import *
+#from src.Regenome import *
 
 # ------======| ANNOVAR |======------
 
@@ -154,10 +155,19 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 	HGMDTable = pandas.read_csv(HGMD, sep='\t', dtype=str)
 	for Col in ['Chromosome/scaffold position start (bp)', 'Chromosome/scaffold position end (bp)']: HGMDTable[Col] = HGMDTable[Col].parallel_apply(Coords)
 	XRefTable = pandas.read_csv(os.path.join(AnnovarFolder, "example/gene_fullxref.txt"), sep='\t', dtype=str).set_index("#Gene_name")
-	del XRefTable.index.name
+	XRefTable = XRefTable.rename_axis(None, axis=1)
+	RegenomeDB = [Regenome(dbname=db["dbName"], filename=db["Filename"], dbtype=db["Type"]) for db in Config["RegenomeAnnotation"]]
 	Logger.info(f"Data loaded - %s" % (SecToTime(time.time() - StartTime)))
 	
 	for ChunkNum, Data in enumerate(pandas.read_csv(InputTSV, sep='\t', dtype=str, chunksize=ChunkSize)):
+		
+		# --- Regenome ---
+		
+		StartTime = time.time()
+		RDB = Data[["Chr", "Start", "End"]].apply(lambda x: [db.annotation(Data["Chr"], Data["Start"], Data["End"]) for db in RegenomeDB], axis=1)
+		print(RDB)
+		Logger.info(f"Regenome databases merged - %s" % (SecToTime(time.time() - StartTime)))
+		exit()
 		
 		# --- ANNOVAR Table ---
 		
@@ -218,7 +228,7 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 		# --- Base Filtering ---
 		
 		StartTime = time.time()
-		DP_filter = Data["VCF.AD"].parallel_apply(Depths)
+		#DP_filter = Data["VCF.AD"].parallel_apply(Depths)
 		#OMIM_filter = Data["Disease_description"].parallel_apply(lambda x: x != '.')
 		#HGMD_filter = Data['HGMD'].parallel_apply(lambda x: x != '.')
 		#PopMax_filter = Data["AnnoFit.PopFreqMax"] < Config["PopMax_filter"]
@@ -230,7 +240,7 @@ def AnnoFit(InputTSV, OutputXLSX, HGMD, AnnovarFolder, AnnoFitConfigFile, Logger
 		##ExonicFunc_filter = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
 		#ncRNA_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
 		#Splicing_filter = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
-		Data = Data[DP_filter] # & PopMax_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
+		#Data = Data[DP_filter] # & PopMax_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
 		Logger.info(f"Base filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 		
 		if Result is None: Result = Data

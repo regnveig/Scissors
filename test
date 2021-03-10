@@ -10,7 +10,7 @@ from src.AnnoFit import *
 
 PipelineConfig = json.load(open("/dev/datasets/FairWind/.cloud/core/labjournal/tools/Scissors/config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
-PrepareReference("/dev/datasets/FairWind/_db/mm10/mm10.fa", Logger, PipelineConfig["GATKCondaEnv"])
+#PrepareReference("/dev/datasets/FairWind/_db/mm10/mm10.fa", Logger, PipelineConfig["GATKCondaEnv"])
 #lst = ["DCFED13-JULTH13", "DCMIH23-JULTH23", "DCSAN1-QUAR1", "DCVAS3-QUAR3"]
 
 #for item in lst: CoverageStats(f"{item}.FR300", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.sorted.bam", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
@@ -21,9 +21,10 @@ PrepareReference("/dev/datasets/FairWind/_db/mm10/mm10.fa", Logger, PipelineConf
 #HaplotypeCalling("/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.final.bam", "/dev/datasets/FairWind/_results/K562_ncbi/merged/K562_ENCBS806UYV/K562_ENCBS806UYV.vcf", PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=10)
 
 #ANNOVAR("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.sorted.vcf", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
-#AnnoFit("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
+#AnnoFit("/dev/datasets/FairWind/_results/P11-12/P12_Sanger.tsv", "/dev/datasets/FairWind/_results/P11-12/P12_Sanger.xlsx", PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, 10000, Threads=PipelineConfig["Threads"])
 
 # gatk FastqToSam -F {R1} -F2 {R2} -O {uBAM} --SAMPLE_NAME S1
 # gatk MarkIlluminaAdapters -I {uBAM} --M {MarkAdaptersMetrics} -O {uBAMxt}
 # gatk SamToFastq -I {uBAMxt} -F {TrimmedR1} --F2 {TrimmedR2} --CLIPPING_ACTION X --CLIPPING_ATTRIBUTE XT
 #
+Regenome("u", "/dev/datasets/FairWind/.cloud/core/labjournal/tools/Scissors/db/ProblematicRegions/GIAB_GenotypeConflict.canonical.tsv", "ucsc", "tt.json")
