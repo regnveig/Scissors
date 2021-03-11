@@ -13,7 +13,7 @@
 	"AnnovarDBFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
 	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
 	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
-	"NotCapture": "/dev/datasets/FairWind/_db/hg19_canonic/NOT_MedExome_hg19_canonic.bed",
+	"GenomeBed": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.bed",
 	"Adapters": {
 		"illumina": {"Name": "illumina", "R1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA", "R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"}
 	},

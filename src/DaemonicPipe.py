@@ -252,18 +252,23 @@ def CoverageStats(Name: str,
 				  FinalBAM: str,
 				  StatsTXT: str,
 				  CaptureBED: str,
-				  NotCaptureBED: str,
+				  GenomeBED: str,
 				  Reference: str,
-				  Logger: logging.Logger) -> dict:
+				  Logger: logging.Logger) -> None:
 	MODULE_NAME = "CoverageStats"
 	# Logging
-	for line in [f"BAM File: {FinalBAM}", f"Reference: {Reference}", f"Capture BED: {CaptureBED}", f"NOT Capture BED: {NotCaptureBED}"]: Logger.info(line)
+	for line in [f"BAM File: {FinalBAM}", f"Reference: {Reference}", f"Capture BED: {CaptureBED}", f"Genome BED: {GenomeBED}"]: Logger.info(line)
 	with tempfile.TemporaryDirectory() as TempDir:
 		# Options
 		RefIndex = f"{Reference}.fai"
+		NotCaptureBED = os.path.join(TempDir, "not_capture.bed")
 		CaptureTemp = os.path.join(TempDir, "capture.csv")
 		NotCaptureTemp = os.path.join(TempDir, "not_capture.csv")
 		# Coverage
+		SimpleSubprocess(
+			Name = f"{MODULE_NAME}.CreateNotCaptureBed",
+			Command = f"bedtools subtract -a \"{GenomeBED}\" -b \"{CaptureBED}\" | sed -e \'s/$/\\t\\./\' > \"{NotCaptureBED}\"",
+			Logger = Logger)
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.CaptureCoverage",
 			Command = f"bedtools coverage -hist -sorted -g \"{RefIndex}\" -a \"{CaptureBED}\" -b \"{FinalBAM}\" | grep -P \"^all.*$\" > \"{CaptureTemp}\"",
@@ -295,20 +300,70 @@ def CoverageStats(Name: str,
 		f"# Input BAM: {FinalBAM}",
 		f"# Reference: {Reference}",
 		f"# Capture: {CaptureBED}",
-		f"# NOT Capture: {NotCaptureBED}",
 		pandas.DataFrame(Result).to_csv(sep='\t', index=False, float_format='%.3f')])
 	# Report Save
 	with open(StatsTXT, 'wt') as StatsFile: StatsFile.write(Report)
-	# Return
-	return Result
 
-def PercentMarkDupMetrics(MDMetricsFile: str) -> dict:
-	for item in pandas.read_csv(MDMetricsFile, sep='\t', comment='#', chunksize=1): return item.squeeze().to_dict()
-
-def BamMetrics(BamMetricsFile):
-	pass
-	# TODO
-
+def HarvestStats(
+	Units: list,
+	Options: dict) -> None:
+	MODULE_NAME = "HarvestStats"
+	
+	def FormatTable(item):
+		if type(item) == int: return f'{item: }'
+		elif type(item) == str: return item
+		elif type(item) == float: return f'{item:.4f}'.replace('.', ',')
+		elif type(item) == list:
+			item = [f'{i: }' if type(i) == int else i for i in item]
+			item = [f'{i:.4f}'.replace('.', ',') if type(i) == float else i for i in item]
+			return '; '.join(item)
+	
+	ReportFile = os.path.join(Options["PoolDir"], "summary.tsv")
+	Data = []
+	for Unit in Units:
+		FileNames = GenerateFileNames(Unit, Options)
+		MarkDupStats = io.StringIO(''.join(open(FileNames["DuplessMetrics"], 'rt').readlines()).split('\n\n')[1])
+		MarkDupStats = pandas.read_csv(MarkDupStats, sep='\t', comment='#').apply(lambda x: x.to_list(), axis=0, result_type="reduce").to_dict()
+		CoverageStats = pandas.read_csv(FileNames["CoverageStats"], sep='\t', comment='#').squeeze().to_dict()
+		PrimaryStats = pandas.read_csv(FileNames["PrimaryStats"], sep='\t', names=[f"QC-passed", f"QC-failed", "index"]).set_index("index")["QC-passed"].to_dict()
+		Result = {}
+		LibCount = list(range(len(MarkDupStats["LIBRARY"])))
+		Result["ID|"] = Unit["ID"]
+		Result["Total|reads"] = int(PrimaryStats["total (QC-passed reads + QC-failed reads)"])
+		Result["Mapped|% of total"] = float(PrimaryStats["mapped %"][:-1])
+		Result["Secondary|% of total"] = int(PrimaryStats["secondary"]) / Result["Total|reads"] * 100
+		Result["Supplementary|% of total"] = int(PrimaryStats["supplementary"]) / Result["Total|reads"] * 100
+		Result["Sequenced|pairs"] = int(int(PrimaryStats["paired in sequencing"]) / 2)
+		Result["Both mapped|% of sequenced"] = int(PrimaryStats["with itself and mate mapped"]) / (Result["Sequenced|pairs"] * 2) * 100
+		Result["Properly paired|% of sequenced"] = float(PrimaryStats["properly paired %"][:-1])
+		Result["Different chrs|% of sequenced"] = int(PrimaryStats["with mate mapped to a different chr (mapQ>=5)"]) / (Result["Sequenced|pairs"] * 2) * 100
+		Result["Singletons|% of sequenced"] = float(PrimaryStats["singletons %"][:-1])
+		Result["Capture DP > 10|% of capture"] = float(CoverageStats["Capture DP>10 [%]"])
+		Result["Capture Average|reads by pos"] = float(CoverageStats["Capture Average"])
+		Result["NotCapture Average|reads by pos"] = float(CoverageStats["NotCapture Average"])
+		Result["Enrichment Average|x"] = float(CoverageStats["Enrichment Average"])
+		Result["Capture DP = 0|% of capture"] = float(CoverageStats["Capture DP0 [%]"])
+		Result["NotCapture DP = 0|% of non-capture"] = float(CoverageStats["NotCapture DP0 [%]"])
+		Result["Libs|."] = MarkDupStats["LIBRARY"]
+		Result["Total by lib|reads"] = [ int(MarkDupStats["READ_PAIRS_EXAMINED"][i]) * 2 + int(MarkDupStats["UNPAIRED_READS_EXAMINED"][i]) + int(MarkDupStats["SECONDARY_OR_SUPPLEMENTARY_RDS"][i]) + int(MarkDupStats["UNMAPPED_READS"][i]) for i in LibCount]
+		Result["Mapped by lib|% of total"] = [(Result["Total by lib|reads"][i] - int(MarkDupStats["UNMAPPED_READS"][i])) / Result["Total by lib|reads"][i] * 100 for i in LibCount]
+		Result["Non-primary by lib|% of total"] = [ MarkDupStats["SECONDARY_OR_SUPPLEMENTARY_RDS"][i] / Result["Total by lib|reads"][i] * 100 for i in LibCount]
+		Result["Both mapped by lib|pairs"] = [int(MarkDupStats["READ_PAIRS_EXAMINED"][i]) for i in LibCount]
+		Result["Singletons by lib|pairs/reads"] = [int(MarkDupStats["UNPAIRED_READS_EXAMINED"][i]) for i in LibCount]
+		Result["Pair dups|% of both mapped"] = [int(MarkDupStats["READ_PAIR_DUPLICATES"][i]) / Result["Both mapped by lib|pairs"][i] * 100 for i in LibCount]
+		Result["Pair optical dups|% of both mapped"] = [int(MarkDupStats["READ_PAIR_OPTICAL_DUPLICATES"][i]) / Result["Both mapped by lib|pairs"][i] * 100 for i in LibCount]
+		Result["Singleton dups|% of singletons"] = [int(MarkDupStats["UNPAIRED_READ_DUPLICATES"][i]) / Result["Singletons by lib|pairs/reads"][i] * 100 for i in LibCount]
+		Result["Duplication by lib|%"] = [float(x) * 100 for x in MarkDupStats["PERCENT_DUPLICATION"]]
+		Result["Estimated lib size|."] = [int(MarkDupStats["ESTIMATED_LIBRARY_SIZE"][i]) for i in LibCount]
+		Result = pandas.DataFrame({key: [value] for key, value in Result.items()}).transpose()
+		Result = Result.applymap(FormatTable)
+		Data += [ dc(Result) ]
+	Data = pandas.concat(Data, axis=1).reset_index()
+	Data = Data.set_index(Data["index"].apply(lambda x: x.split("|")[0]).rename(None))
+	Data["index"] = Data["index"].apply(lambda x: x.split("|")[1])
+	Data = Data.transpose()
+	Data.to_csv(ReportFile, sep='\t', index=False)
+	
 def ComposeRGTag(ReadName, Sample, Library, Logger):
 	
 	# TODO KnV
@@ -358,7 +413,6 @@ def ComposeRGTag(ReadName, Sample, Library, Logger):
 	# Return
 	return f"@RG\\tID:{ID}\\tPL:{PL}\\tPU:{PU}\\tLB:{LB}\\tSM:{SM}"
 
-
 # ------======| DAEMONIC PIPELINE |======------
 
 def DaemonicPipe(
@@ -368,42 +422,33 @@ def DaemonicPipe(
 	# Load data
 	CurrentStage = f"{UnitsFile}.daemonic_stage"
 	PipelineConfig = json.load(open(PipelineConfigFile, 'rt'))
-	if os.path.exists(CurrentStage) and os.path.isfile(CurrentStage): 
-		Units = json.load(open(CurrentStage, 'rt'))
+	if os.path.exists(CurrentStage) and os.path.isfile(CurrentStage):
+		Protocol = json.load(open(CurrentStage, 'rt'))
 		warnings.warn(f"Resume previously interrupted pipeline from backup '{CurrentStage}'")
-	else: Units = json.load(open(UnitsFile, 'rt'))
+	else: 
+		Protocol = json.load(open(UnitsFile, 'rt'))
 	# Create backup
 	BackupPossible = True
 	try:
-		SaveJSON(Units, CurrentStage)
+		SaveJSON(Protocol, CurrentStage)
 	except:
 		warnings.warn(f"Backup file '{CurrentStage}' cannot be created. If pipeline is interrupted, changes will not be saved")
 		BackupPossible = False
 	# Processing
-	for Unit in Units:
+	for Unit in Protocol["Units"]:
 		# Timestamp
 		StartTime = time.time()
 		# Compose filenames
-		IRs = os.path.join(Unit['OutputDir'], "IRs")
-		FileNames = {
-			"Log": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.pipeline_log.txt"),
-			"PrimaryBAM": os.path.join(IRs, f"{Unit['ID']}.primary.bam"),
-			"PrimaryStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.primary_stats.txt"),
-			"DuplessBAM": os.path.join(IRs, f"{Unit['ID']}.dupless.bam"),
-			"DuplessMetrics": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.md_metrics.txt"),
-			"RecalBAM": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.final.bam"),
-			"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
-			"CoverageStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.coverage.txt")
-			}
+		FileNames = GenerateFileNames(Unit, Protocol["Options"])
 		
 		if Unit["Stage"] == 0:
 			
 			# Create dirs
-			os.mkdir(Unit['OutputDir'])
-			os.mkdir(IRs)
+			os.mkdir(FileNames["OutputDir"])
+			os.mkdir(FileNames["IRs"])
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		# Configure logging
 		Logger = DefaultLogger(FileNames["Log"])
@@ -418,7 +463,7 @@ def DaemonicPipe(
 				if item["Type"] == "bam": pass # TODO
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 2:
 			
@@ -452,10 +497,10 @@ def DaemonicPipe(
 				# Merge & Copy
 				if len(Shards) > 1: MergeBAMs(Shards, FileNames["PrimaryBAM"], "queryname", Logger, PipelineConfig["GATKCondaEnv"])
 				else: SimpleSubprocess(f"{MODULE_NAME}.CopyBAM", f"cp \"{Shards[0]}\" \"{FileNames['PrimaryBAM']}\"", Logger)
-				SimpleSubprocess(f"{MODULE_NAME}.FlagStats", f"samtools flagstat \"{FileNames['PrimaryBAM']}\" > \"{FileNames['PrimaryStats']}\"", Logger)
+				SimpleSubprocess(f"{MODULE_NAME}.FlagStats", f"samtools flagstat -O tsv \"{FileNames['PrimaryBAM']}\" > \"{FileNames['PrimaryStats']}\"", Logger)
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 3:
 			
@@ -463,7 +508,7 @@ def DaemonicPipe(
 			MarkDuplicates(FileNames["PrimaryBAM"], FileNames["DuplessBAM"], FileNames["DuplessMetrics"], Logger, PipelineConfig["GATKCondaEnv"])
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 4:
 			
@@ -471,15 +516,15 @@ def DaemonicPipe(
 			BaseRecalibration(FileNames["DuplessBAM"], FileNames["RecalBAM"], PipelineConfig["dbSNP"], PipelineConfig["Reference"], PipelineConfig["GATK_ConfigFile"], Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 5:
 			
 			# Coverage Stats
-			CoverageStats(Unit['ID'], FileNames["RecalBAM"], FileNames["CoverageStats"], PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)
+			CoverageStats(Unit['ID'], FileNames["RecalBAM"], FileNames["CoverageStats"], PipelineConfig["Capture"], PipelineConfig["GenomeBed"], PipelineConfig["Reference"], Logger)
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 6:
 			
@@ -490,6 +535,10 @@ def DaemonicPipe(
 			Logger.info(f"Unit {Unit['ID']} successfully finished, summary time - %s" % (SecToTime(time.time() - StartTime)))
 			
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
+	
+	HarvestStats(
+		Units = Protocol["Units"],
+		Options = Protocol["Options"])
 	
 	os.remove(CurrentStage)

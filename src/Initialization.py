@@ -1,14 +1,28 @@
 from src.SharedFunctions import *
-from copy import deepcopy as dc
 
-def PrepareReference(Reference, Logger, Env):
-	
+def PrepareReference(
+	Reference: str,
+	Logger: logging.Logger,
+	Env: str) -> None:
 	MODULE_NAME = "PrepareReference"
-	
 	# Processing
-	SimpleSubprocess(f"{MODULE_NAME}.SamtoolsIndex", f"samtools faidx \"{Reference}\"", Logger)
-	SimpleSubprocess(f"{MODULE_NAME}.BWAIndex", f"bwa index \"{Reference}\"", Logger)
-	SimpleSubprocess(f"{MODULE_NAME}.GATKIndex",  f"gatk CreateSequenceDictionary -R \"{Reference}\"", Logger, Env=Env) 
+	SimpleSubprocess(
+		Name = f"{MODULE_NAME}.SamtoolsIndex",
+		Command = f"samtools faidx \"{Reference}\"",
+		Logger = Logger)
+	SimpleSubprocess(
+		Name = f"{MODULE_NAME}.BWAIndex",
+		Command = f"bwa index \"{Reference}\"",
+		Logger = Logger)
+	SimpleSubprocess(
+		Name = f"{MODULE_NAME}.GATKIndex",
+		Command = f"gatk CreateSequenceDictionary -R \"{Reference}\"",
+		Logger = Logger,
+		Env = Env)
+	SimpleSubprocess(
+		Name = f"{MODULE_NAME}.GenomeBED",
+		Command = "awk 'BEGIN {FS=\"\\t\"}; {print $1 FS \"0\" FS $2}' \"" + Reference + ".fai\" > \"" + Reference + ".bed\"",
+		Logger = Logger)
 
 def Regenome(dbname, filename, dbtype, savename, Threads=cpu_count()):
 	

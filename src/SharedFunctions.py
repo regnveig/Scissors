@@ -1,103 +1,131 @@
 from contextlib import contextmanager
+from copy import deepcopy as dc
 from glob import glob
 from multiprocessing import cpu_count, Pool
 from pandarallel import pandarallel
+from typing import Union
 import bz2
 import datetime
 import functools
 import gzip
+import io
 import json
 import logging
+import math
 import os
 import pandas
 import pysam
 import re
-import statistics
 import subprocess
 import sys
 import tempfile
 import time
-from typing import Union
 import warnings
-
 
 ## ------======| LOGGING |======------
 
-def DefaultLogger(LogFileName):
+def DefaultLogger(
+	LogFileName: str,
+	Level: int = logging.INFO) -> logging.Logger:
 	# Format
 	Formatter = "%(asctime)-30s%(levelname)-13s%(funcName)-25s%(message)s"
 	# Compose logger
 	Logger = logging.getLogger("default_logger")
-	logging.basicConfig(level=logging.INFO, format=Formatter)
+	logging.basicConfig(level=Level, format=Formatter)
 	# Add log file
 	Logger.handlers = []
 	LogFile = logging.FileHandler(LogFileName)
-	LogFile.setLevel(logging.INFO)
+	LogFile.setLevel(Level)
 	LogFile.setFormatter(logging.Formatter(Formatter))
 	Logger.addHandler(LogFile)
 	# Return
 	return Logger
 
-## ------======| SHARED |======------
+## ------======| I/O |======------
 
-def GzipCheck(FileName): return open(FileName, 'rb').read(2).hex() == "1f8b"
+def GetContigs(FileBAM: str) -> list: return pysam.AlignmentFile(FileBAM, 'rb').header['SQ']
 
-def Bzip2Check(FileName): return open(FileName, 'rb').read(3).hex() == "425a68"
+def SaveJSON(Data: list, FileName: str) -> None: json.dump(Data, open(FileName, 'w'), indent=4, ensure_ascii=False)
 
-def SecToTime(Sec): return str(datetime.timedelta(seconds=int(Sec)))
+def GzipCheck(FileName: str) -> bool: return open(FileName, 'rb').read(2).hex() == "1f8b"
 
-def MultipleTags(Tag, List, Quoted=True): return ' '.join([(f"{Tag} \"{str(item)}\"" if Quoted else f"{Tag} {str(item)}") for item in List])
+def Bzip2Check(FileName: str) -> bool: return open(FileName, 'rb').read(3).hex() == "425a68"
 
-def GetContigs(FileBAM): return pysam.AlignmentFile(FileBAM, 'rb').header['SQ']
-
-def SaveJSON(Data, FileName): json.dump(Data, open(FileName, 'w'), indent=4, ensure_ascii=False)
-
-def OpenAnyway(FileName, Mode, Logger):
+def OpenAnyway(FileName: str,
+			   Mode: str,
+			   Logger: logging.Logger):
 	try:
-		IsGZ = GzipCheck(FileName)
-		IsBZ2 = Bzip2Check(FileName)
+		IsGZ = GzipCheck(FileName=FileName)
+		IsBZ2 = Bzip2Check(FileName=FileName)
 		return gzip.open(FileName, Mode) if IsGZ else (bz2.open(FileName, Mode) if IsBZ2 else open(FileName, Mode))
 	except OSError as Err:
 		ErrorMessage = f"Can't open the file '{FileName}' ({Err})"
 		Logger.error(ErrorMessage)
 		raise OSError(ErrorMessage)
 
+def GenerateFileNames(
+	Unit: dict,
+	Options: dict) -> dict:
+	Unit['OutputDir'] = os.path.join(Options["PoolDir"], Unit['ID'])
+	IRs = os.path.join(Unit['OutputDir'], "IRs")
+	FileNames = {
+		"OutputDir": Unit['OutputDir'],
+		"IRs": IRs,
+		"Log": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.pipeline_log.txt"),
+		"PrimaryBAM": os.path.join(IRs, f"{Unit['ID']}.primary.bam"),
+		"PrimaryStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.primary_stats.txt"),
+		"DuplessBAM": os.path.join(IRs, f"{Unit['ID']}.dupless.bam"),
+		"DuplessMetrics": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.md_metrics.txt"),
+		"RecalBAM": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.final.bam"),
+		"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
+		"CoverageStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.coverage.txt")
+	}
+	return FileNames
+
+## ------======| THREADING |======------
+
 @contextmanager
-def Threading(Name, Logger, Threads):
-	
+def Threading(Name: str,
+			  Logger: logging.Logger,
+			  Threads: int) -> None:
 	# Timestamp
 	StartTime = time.time()
-	
 	# Pooling
 	pool = Pool(Threads)
 	yield pool
 	pool.close()
 	pool.join()
 	del pool
-	
 	# Timestamp
 	Logger.info(f"{Name} finished on {str(Threads)} threads, summary time - %s" % (SecToTime(time.time() - StartTime)))
 
-def SimpleSubprocess(Name, Command, Logger, CheckPipefail=False, Env=None, AllowedCodes=[]):
-	
+## ------======| SUBPROCESS |======------
+
+def SimpleSubprocess(Name: str,
+					 Command: str,
+					 Logger: logging.Logger,
+					 CheckPipefail: bool = False,
+					 Env: Union[str, None] = None,
+					 AllowedCodes: list = []) -> None:
 	# Timestamp
 	StartTime = time.time()
-	
 	# Compose command
 	Command = (f"source {Env}; " if Env is not None else f"") + (f"set -o pipefail; " if CheckPipefail else f"") + Command
 	Logger.debug(Command)
-	
 	# Shell
 	Shell = subprocess.Popen(Command, shell=True, executable="/bin/bash", stdout=open(os.devnull, 'w'), stderr=subprocess.PIPE)
 	Error = Shell.communicate()[1]
 	if Shell.returncode != 0 and Shell.returncode not in AllowedCodes:
 		ErrorMessage1 = f"Command '{Name}' has returned non-zero exit code [{str(Shell.returncode)}]."
 		ErrorMessage2 = '\n\n' + Error.decode('utf-8') + '\n'
-		Logger.error(ErrorMessage1)
-		Logger.error(Command)
-		Logger.error(ErrorMessage2)
+		for line in [ErrorMessage1, Command, ErrorMessage2]: Logger.error(line)
 		raise OSError(f"{ErrorMessage1}{ErrorMessage2}")
 	if Shell.returncode in AllowedCodes: Logger.warning(f"Command '{Name}' has returned ALLOWED non-zero exit code [{str(Shell.returncode)}].")
-	
 	# Timestamp
-	Logger.info(f"{Name} - %s" % (SecToTime(time.time() - StartTime))) 
+	Logger.info(f"{Name} - %s" % (SecToTime(time.time() - StartTime)))
+
+## ------======| MISC |======------
+
+def SecToTime(Sec: float) -> str: return str(datetime.timedelta(seconds=int(Sec)))
+
+def MultipleTags(Tag: str, List: list, Quoted: bool = True) -> str: return ' '.join([(f"{Tag} \"{str(item)}\"" if Quoted else f"{Tag} {str(item)}") for item in List])
