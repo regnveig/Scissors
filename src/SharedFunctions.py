@@ -129,3 +129,14 @@ def SimpleSubprocess(Name: str,
 def SecToTime(Sec: float) -> str: return str(datetime.timedelta(seconds=int(Sec)))
 
 def MultipleTags(Tag: str, List: list, Quoted: bool = True) -> str: return ' '.join([(f"{Tag} \"{str(item)}\"" if Quoted else f"{Tag} {str(item)}") for item in List])
+
+def PrepareGenomeBED(
+	Reference: str,
+	GenomeBED: str,
+	Logger: logging.Logger) -> None:
+	MODULE_NAME = "PrepareGenomeBED"
+	# Processing
+	SimpleSubprocess(
+		Name = f"{MODULE_NAME}.Create",
+		Command = "awk 'BEGIN {FS=\"\\t\"}; {print $1 FS \"0\" FS $2}' \"" + Reference + ".fai\" > \"" + GenomeBED + "\"",
+		Logger = Logger)

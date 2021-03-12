@@ -10,7 +10,8 @@ from src.AnnoFit import *
 
 PipelineConfig = json.load(open("config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
-PrepareReference("/dev/datasets/FairWind/_db/test_genome/hg.fasta", Logger, PipelineConfig["GATKCondaEnv"])
+#PrepareReference("/dev/datasets/FairWind/_db/test_genome/hg.fasta", Logger, PipelineConfig["GATKCondaEnv"])
+#PrepareCapture("/dev/datasets/FairWind/_db/KAPA HyperExome_hg19_capture_targets.bed", PipelineConfig["Reference"], "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed", Logger)
 #lst = ["DCFED13-JULTH13", "DCMIH23-JULTH23", "DCSAN1-QUAR1", "DCVAS3-QUAR3"]
 
 #for item in lst: CoverageStats(f"{item}.FR300", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.sorted.bam", f"/dev/datasets/FairWind/_results/FR300/{item}.FR150.stats.txt", PipelineConfig["Capture"], PipelineConfig["NotCapture"], PipelineConfig["Reference"], Logger)

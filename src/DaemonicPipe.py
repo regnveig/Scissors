@@ -252,19 +252,23 @@ def CoverageStats(Name: str,
 				  FinalBAM: str,
 				  StatsTXT: str,
 				  CaptureBED: str,
-				  GenomeBED: str,
 				  Reference: str,
 				  Logger: logging.Logger) -> None:
 	MODULE_NAME = "CoverageStats"
 	# Logging
-	for line in [f"BAM File: {FinalBAM}", f"Reference: {Reference}", f"Capture BED: {CaptureBED}", f"Genome BED: {GenomeBED}"]: Logger.info(line)
+	for line in [f"BAM File: {FinalBAM}", f"Reference: {Reference}", f"Capture BED: {CaptureBED}"]: Logger.info(line)
 	with tempfile.TemporaryDirectory() as TempDir:
 		# Options
 		RefIndex = f"{Reference}.fai"
 		NotCaptureBED = os.path.join(TempDir, "not_capture.bed")
 		CaptureTemp = os.path.join(TempDir, "capture.csv")
 		NotCaptureTemp = os.path.join(TempDir, "not_capture.csv")
+		GenomeBED = os.path.join(TempDir, "genome.bed")
 		# Coverage
+		PrepareGenomeBED(
+			Reference = Reference,
+			GenomeBED = GenomeBED,
+			Logger = Logger)
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.CreateNotCaptureBed",
 			Command = f"bedtools subtract -a \"{GenomeBED}\" -b \"{CaptureBED}\" | sed -e \'s/$/\\t\\./\' > \"{NotCaptureBED}\"",
@@ -521,7 +525,7 @@ def DaemonicPipe(
 		if Unit["Stage"] == 5:
 			
 			# Coverage Stats
-			CoverageStats(Unit['ID'], FileNames["RecalBAM"], FileNames["CoverageStats"], PipelineConfig["Capture"], PipelineConfig["GenomeBed"], PipelineConfig["Reference"], Logger)
+			CoverageStats(Unit['ID'], FileNames["RecalBAM"], FileNames["CoverageStats"], PipelineConfig["Capture"], PipelineConfig["Reference"], Logger)
 			
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
