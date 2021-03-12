@@ -1,6 +1,4 @@
-# Scissors
-
-Пайплайн для обработки экзомных данных.
+# Scissors: SNP Discovery in Exo-C Data
 
 ## Протокол
 

@@ -1,32 +1,31 @@
 {
-	"GenomeAssembly": "hg19",
+	"GenomeAssembly": "hg19", 
 	"Reference": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.fa",
+	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
+	
+	"FastQSampleSize": 1000000,
+	"Threads": 10,
+	
+	"Adapters": {
+		"illumina": {
+			"Name": "illumina",
+			"R1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA",
+			"R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
+		}
+	},
+	
 	"GATKCondaEnv": "/dev/datasets/FairWind/_tools/gatk_conda/bin/activate gatk",
 	"GATK_ConfigFile": "config/GATK_config.txt",
+	"dbSNP": "/dev/datasets/FairWind/_db/dbsnp/dbsnp151_filtered.vcf.gz",
+	
 	"AnnoFitConfig": "config/AnnoFit_config.json",
 	"AnnofitChunkSize": 300000,
 	"HGMDPath": "db/HGMD.tsv",
-	"FastQSampleSize": 1000000,
-	"Threads": 10,
-	"dbSNP": "/dev/datasets/FairWind/_db/dbsnp/dbsnp151_filtered.vcf.gz",
-	"AnnovarFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar",
+	
 	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
-	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
-	"GenomeBed": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.bed",
-	"Adapters": {
-		"illumina": {"Name": "illumina", "R1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA", "R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"}
-	},
-	"AnnovarDBFolder": "/dev/datasets/FairWind/.cloud/core/Scissors/db/ProblematicRegions",
+	"AnnovarFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar",
+	"AnnovarDBFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
 	"AnnovarDatabases": [
-		{
-			"Protocol": "ENCODE_Blacklist",
-			"Operation": "r",
-			"Comment": "",
-			"Database": "ENCODE_Blacklist"
-		}
-	],
-	"AnnovarDBFolder1": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
-	"AnnovarDatabases1": [
 		{
 			"Protocol": "refGene",
 			"Operation": "g",
