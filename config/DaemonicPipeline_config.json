@@ -10,14 +10,23 @@
 	"Threads": 10,
 	"dbSNP": "/dev/datasets/FairWind/_db/dbsnp/dbsnp151_filtered.vcf.gz",
 	"AnnovarFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar",
-	"AnnovarDBFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
 	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
 	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
 	"GenomeBed": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.bed",
 	"Adapters": {
 		"illumina": {"Name": "illumina", "R1": "AGATCGGAAGAGCACACGTCTGAACTCCAGTCA", "R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"}
 	},
+	"AnnovarDBFolder": "/dev/datasets/FairWind/.cloud/core/Scissors/db/ProblematicRegions",
 	"AnnovarDatabases": [
+		{
+			"Protocol": "ENCODE_Blacklist",
+			"Operation": "r",
+			"Comment": "",
+			"Database": "ENCODE_Blacklist"
+		}
+	],
+	"AnnovarDBFolder1": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
+	"AnnovarDatabases1": [
 		{
 			"Protocol": "refGene",
 			"Operation": "g",

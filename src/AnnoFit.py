@@ -233,7 +233,7 @@ def AnnoFit(
 	Filters["pLi"] = Result["pLi"].parallel_apply(FilterpLi)
 	Filters["OMIM_Dominance"] = Result["Disease_description"].parallel_apply(FilterOmimDominance)
 	Filters["Zygocity"] = Result["VCF.GT"].parallel_apply(lambda x: x == 'HOMO')
-	Filters["NoInfo"] = Result[["pLi", "Disease_description"]].parallel_apply(FilterNoInfo)
+	Filters["NoInfo"] = Result[["pLi", "Disease_description"]].parallel_apply(FilterNoInfo, axis=1)
 	Filters["Compound_filter"] = Result['Annofit.Compound'].parallel_apply(lambda x: any([int(item) > 1 for item in x.split(';')]))
 	#Result = Result[Compound_filter | pLi_filter | OMIM_Dominance_filter | Zygocity_filter | NoInfo_filter]
 	Result = Result.sort_values(by=["Chr", "Start", "End"])
@@ -270,61 +270,42 @@ def AnnoFit(
 
 # ------======| ANNOTATION PIPELINE |======------
 
-def AnnoPipe(PipelineConfigFile, UnitsFile):
-	
+def AnnoPipe(
+	PipelineConfigFile: str,
+	UnitsFile: str) -> None:
 	MODULE_NAME = "AnnoPipe"
-	
-	# Load data
-	CurrentStage = f"{UnitsFile}.annotation_stage"
-	PipelineConfig = json.load(open(PipelineConfigFile, 'rt'))
-	if os.path.exists(CurrentStage) and os.path.isfile(CurrentStage): 
-		Units = json.load(open(CurrentStage, 'rt'))
-		warnings.warn(f"Resume previously interrupted pipeline from backup '{CurrentStage}'")
-	else: Units = json.load(open(UnitsFile, 'rt'))
-	
-	# Create backup
-	BackupPossible = True
-	try:
-		SaveJSON(Units, CurrentStage)
-	except:
-		warnings.warn(f"Backup file '{CurrentStage}' cannot be created. If pipeline is interrupted, changes will not be saved")
-		BackupPossible = False
-	
+	Protocol, PipelineConfig, CurrentStage, BackupPossible = MakePipe(MODULE_NAME, PipelineConfigFile, UnitsFile) # MakePipe
 	# Processing
-	for Unit in Units:
-		
-		# Timestamp
+	for Unit in Protocol["Units"]:
 		StartTime = time.time()
-		
-		# Compose filenames
-		IRs = os.path.join(Unit['OutputDir'], "IRs")
-		FileNames = {
-			"Log": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.pipeline_log.txt"),
-			"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
-			"AnnovarTable": os.path.join(IRs, f"{Unit['ID']}.annovar.tsv"),
-			"FilteredXLSX": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.AnnoFit.xlsx")
-			}
-		
-		# Configure logging
-		Logger = DefaultLogger(FileNames["Log"])
+		FileNames = GenerateFileNames(Unit, Protocol["Options"]) # Compose filenames
+		Logger = DefaultLogger(FileNames["Log"]) # Configure logging
 		
 		if Unit["Stage"] == 0:
-			
-			# ANNOVAR
-			ANNOVAR(FileNames["VCF"], FileNames["AnnovarTable"], PipelineConfig["AnnovarDatabases"], PipelineConfig["AnnovarDBFolder"], PipelineConfig["AnnovarFolder"], PipelineConfig["GenomeAssembly"], Logger, Threads=PipelineConfig["Threads"])
-			
+			ANNOVAR(
+				InputVCF = FileNames["VCF"],
+				OutputTSV = FileNames["AnnovarTable"],
+				Databases = PipelineConfig["AnnovarDatabases"],
+				DBFolder = PipelineConfig["AnnovarDBFolder"],
+				AnnovarFolder = PipelineConfig["AnnovarFolder"],
+				GenomeAssembly = PipelineConfig["GenomeAssembly"],
+				Logger = Logger,
+				Threads = PipelineConfig["Threads"])
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
-		
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
+			
 		if Unit["Stage"] == 1:
-			
-			# AnnoFit
-			AnnoFit(FileNames["AnnovarTable"], FileNames["FilteredXLSX"], PipelineConfig["HGMDPath"], PipelineConfig["AnnovarFolder"], PipelineConfig["AnnoFitConfig"], Logger, PipelineConfig["AnnofitChunkSize"], Threads=PipelineConfig["Threads"])
-			
-			# Timestamp
-			Logger.info(f"Unit {Unit['ID']} successfully annotated, summary time - %s" % (SecToTime(time.time() - StartTime)))
-			
+			AnnoFit(
+				InputTSV = FileNames["AnnovarTable"],
+				OutputXLSX = FileNames["FilteredXLSX"],
+				HGMD = PipelineConfig["HGMDPath"],
+				AnnovarFolder = PipelineConfig["AnnovarFolder"],
+				AnnoFitConfigFile = PipelineConfig["AnnoFitConfig"],
+				Logger = Logger,
+				ChunkSize = PipelineConfig["AnnofitChunkSize"],
+				Threads = PipelineConfig["Threads"])
 			Unit["Stage"] += 1
-			if BackupPossible: SaveJSON(Units, CurrentStage)
+			if BackupPossible: SaveJSON(Protocol, CurrentStage)
+			Logger.info(f"Unit {Unit['ID']} successfully annotated, summary time - %s" % (SecToTime(time.time() - StartTime)))
 	
 	os.remove(CurrentStage)

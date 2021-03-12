@@ -78,7 +78,10 @@ def GenerateFileNames(
 		"DuplessMetrics": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.md_metrics.txt"),
 		"RecalBAM": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.final.bam"),
 		"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
-		"CoverageStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.coverage.txt")
+		"CoverageStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.coverage.txt"),
+		"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
+		"AnnovarTable": os.path.join(IRs, f"{Unit['ID']}.annovar.tsv"),
+		"FilteredXLSX": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.AnnoFit.xlsx")
 	}
 	return FileNames
 
@@ -140,3 +143,37 @@ def PrepareGenomeBED(
 		Name = f"{MODULE_NAME}.Create",
 		Command = "awk 'BEGIN {FS=\"\\t\"}; {print $1 FS \"0\" FS $2}' \"" + Reference + ".fai\" > \"" + GenomeBED + "\"",
 		Logger = Logger)
+
+def MakePipe(
+	Name: str,
+	PipelineConfigFile: str,
+	UnitsFile: str) -> tuple:
+	MODULE_NAME = "MakePipe"
+	# Options
+	CurrentStage = f"{UnitsFile}.{Name}.backup"
+	# Load data
+	PipelineConfig = json.load(open(PipelineConfigFile, 'rt'))
+	if os.path.exists(CurrentStage) and os.path.isfile(CurrentStage):
+		Protocol = json.load(open(CurrentStage, 'rt'))
+		warnings.warn(f"Resume previously interrupted pipeline from backup '{CurrentStage}'")
+	else: Protocol = json.load(open(UnitsFile, 'rt'))
+	# Create backup
+	BackupPossible = True
+	try:
+		SaveJSON(Protocol, CurrentStage)
+	except:
+		warnings.warn(f"Backup file '{CurrentStage}' cannot be created. If pipeline is interrupted, changes will not be saved")
+		BackupPossible = False
+	return (Protocol, PipelineConfig, CurrentStage, BackupPossible)
+
+
+
+
+
+
+
+
+
+
+
+

@@ -50,30 +50,35 @@ def PrepareCapture(
 			Command = f"bedtools sort -faidx \"{Faidx}\" -i \"{FilteredBED}\" | sed -e \'s/$/\\t\\./\' > \"{OutputBED}\"",
 			Logger = Logger)
 
-def Regenome(dbname, filename, dbtype, savename, Threads=cpu_count()):
-	
-	pandarallel.initialize(nb_workers=Threads, verbose=1)
-	
-	Tree = dict()
-	dbtypes = ["ucsc"]
-	
-	if dbtype == dbtypes[0]:
-		assert (type(dbname) == str) and (type(filename) == str), f"dbname and filename must be string type"
-		chrom, start, end = "#chrom", "chromStart", "chromEnd"
-		data = pandas.read_csv(filename, sep="\t")
-		t1, t2 = data[[chrom, "chromStart"]].rename(columns={"chromStart": "pos"}), data[[chrom, "chromEnd"]].rename(columns={"chromEnd": "pos"})
-		t1, t2 = t1.reset_index(), t2.reset_index()
-		t1["type"], t2["type"] = True, False
-		t = pandas.concat([t1, t2]).sort_values(by=[chrom, "pos"])
-		stepper, now = [], {}
-		for i, line in t.iterrows():
-			if line["type"]: now[line["index"]] = True
-			else: del now[line["index"]]
-			stepper += [ dc(now) ]
-		t["content"] = stepper
-		newindex = [item for item in data.columns.to_list() if item not in [chrom, start, end]]
-		t["content"] = t["content"].parallel_apply(lambda x: str([data.loc[item,:][newindex].to_dict() for item in x.keys()]))
-		for c in list(set(data[chrom].to_list())):
-			t0 = t[t[chrom] == c].sort_values(by="pos")
-			Tree[c] = {"pos": t0["pos"].to_list(), "content": t0["content"].to_list()}
-		SaveJSON(Tree, savename)
+def Ucsc2Gff3(
+	dbName: str,
+	InputUCSC: str,
+	OutputGFF3: str,
+	Reference: str,
+	Logger: logging.Logger) -> None:
+	MODULE_NAME = "Ucsc2Gff3"
+	for line in [f"Name: {dbName}", f"Input UCSC db: {InputUCSC}", f"Output GFF3: {OutputGFF3}"]: Logger.info(line)
+	# Options
+	AnchorCols = ["#chrom", "chromStart", "chromEnd"]
+	DataOrder = ["#chrom", "sample", "type", "chromStart", "chromEnd", "score", "strand", "phase", "attributes"]
+	# Prepare faidx
+	Faidx = pandas.read_csv(Reference + ".fai", sep='\t', header=None).assign(Tag="##sequence-region", Start=1)[["Tag", 0, "Start", 1]]
+	Chroms = {value: index for index, value in enumerate(Faidx[0].to_list())}
+	# Load data
+	Data = pandas.read_csv(InputUCSC, sep='\t')
+	AttributeCols = [item for item in Data.columns.to_list() if item not in AnchorCols]
+	# Filter & sort intervals by reference
+	Data = Data[Data["#chrom"].apply(lambda x: x in Chroms.keys())]
+	Data["Rank"] = Data["#chrom"].map(Chroms)
+	Data.sort_values(["Rank", "chromStart"], inplace=True)
+	# Processing
+	Attributes = Data[AttributeCols].apply(lambda x: "ID=" + json.dumps(x.to_dict()).encode('utf-8').hex(), axis=1)
+	Data.drop(columns=AttributeCols, inplace=True)
+	Data["chromStart"] = Data["chromStart"].apply(lambda x: 1 if x == 0 else x)
+	Data = Data.assign(sample=dbName, type="region", attributes=Attributes,	score=".", strand=".", phase=".")[DataOrder]
+	# Save
+	with open(OutputGFF3, 'wt') as O:
+		O.write(
+			"##gff-version 3\n" +
+			Faidx.to_csv(sep=' ', index=False, header=False) + 
+			Data.to_csv(sep='\t', index=False, header=False))

@@ -368,7 +368,11 @@ def HarvestStats(
 	Data = Data.transpose()
 	Data.to_csv(ReportFile, sep='\t', index=False)
 	
-def ComposeRGTag(ReadName, Sample, Library, Logger):
+def ComposeRGTag(
+	FileName: str,
+	Sample: str,
+	Library: str,
+	Logger: logging.Logger) -> str:
 	
 	# TODO KnV
 	
@@ -386,6 +390,8 @@ def ComposeRGTag(ReadName, Sample, Library, Logger):
 		"ILLUMINA;NCBI_ihk;Sample": "^@(?P<Sample>[^\\.]+).* SL(?P<Lane>\\d+)_R(?P<Run>\\d+)_(?P<Instrument>[\\w-]+)_.* length=\\d+$"
 		}
 	
+	ReadName = OpenAnyway(FileName=FileName, Mode='r', Logger=Logger).readline().decode('utf-8')[:-1]
+		
 	# Apply regex
 	Format = [f for f in LineFormats if re.fullmatch(LineFormats[f], ReadName) is not None]
 	if not Format: 
@@ -423,124 +429,150 @@ def DaemonicPipe(
 	PipelineConfigFile: str,
 	UnitsFile: str) -> None:
 	MODULE_NAME = "DaemonicPipe"
-	# Load data
-	CurrentStage = f"{UnitsFile}.daemonic_stage"
-	PipelineConfig = json.load(open(PipelineConfigFile, 'rt'))
-	if os.path.exists(CurrentStage) and os.path.isfile(CurrentStage):
-		Protocol = json.load(open(CurrentStage, 'rt'))
-		warnings.warn(f"Resume previously interrupted pipeline from backup '{CurrentStage}'")
-	else: 
-		Protocol = json.load(open(UnitsFile, 'rt'))
-	# Create backup
-	BackupPossible = True
-	try:
-		SaveJSON(Protocol, CurrentStage)
-	except:
-		warnings.warn(f"Backup file '{CurrentStage}' cannot be created. If pipeline is interrupted, changes will not be saved")
-		BackupPossible = False
+	Protocol, PipelineConfig, CurrentStage, BackupPossible = MakePipe(MODULE_NAME, PipelineConfigFile, UnitsFile) # MakePipe
 	# Processing
 	for Unit in Protocol["Units"]:
-		# Timestamp
 		StartTime = time.time()
-		# Compose filenames
-		FileNames = GenerateFileNames(Unit, Protocol["Options"])
+		FileNames = GenerateFileNames(Unit, Protocol["Options"]) # Compose filenames
 		
 		if Unit["Stage"] == 0:
-			
 			# Create dirs
 			os.mkdir(FileNames["OutputDir"])
 			os.mkdir(FileNames["IRs"])
-			
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
-		# Configure logging
-		Logger = DefaultLogger(FileNames["Log"])
+		Logger = DefaultLogger(FileNames["Log"]) # Configure logging
 		
 		if Unit["Stage"] == 1:
-			
 			# Check/add/replace @RG
 			for item in Unit["Input"]:
-				if item["Type"] == "fastq":
-					ReadName = OpenAnyway(item["R1"], 'r', Logger).readline().decode('utf-8')[:-1]
-					if item["RG"] is None: item["RG"] = ComposeRGTag(ReadName, item["Sample"], item["Library"], Logger)
+				if (item["Type"] == "fastq") and (item["RG"] is None):
+					ComposeRGTag(
+						FileName = item["R1"],
+						Sample = item["Sample"],
+						Library = item["Library"],
+						Logger = Logger)
 				if item["Type"] == "bam": pass # TODO
-			
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 2:
-			
 			with tempfile.TemporaryDirectory() as TempDir:
 				Shards = []
 				for index, item in enumerate(Unit["Input"]):
 					if item["Type"] == "fastq":
-						
 						TempR1, TempR2 = item["R1"], item["R2"]
-						
 						# Convert SOLiD
 						if item["Format"] == 'solid':
 							_TempR1, _TempR2 = os.path.join(TempDir, f"solid2illumina_R1_{str(index)}.fastq.gz"), None if item["R2"] is None else os.path.join(TempDir, f"solid2illumina_R2_{str(index)}.fastq.gz")
-							Solid2Illumina(TempR1, _TempR1, Logger)
-							if item["R2"] is not None: Solid2Illumina(TempR2, _TempR2, Logger)
+							Solid2Illumina(
+								InputFQ = TempR1,
+								OutputFQ = _TempR1,
+								Logger = Logger)
+							if item["R2"] is not None:
+								Solid2Illumina(
+									InputFQ = TempR2,
+									OutputFQ = _TempR2,
+									Logger = Logger)
 							TempR1, TempR2 = _TempR1, _TempR2
-						
 						# Trim
 						if item["Adapter"] is not None:
 							ReportTXT = os.path.join(Unit['OutputDir'], f"{Unit['ID']}.InputItem{str(index)}.cutadapt.txt")
 							_TempR1, _TempR2 = os.path.join(TempDir, f"adapter_R1_{str(index)}.fastq.gz"), None if item["R2"] is None else os.path.join(TempDir, f"adapter_R2_{str(index)}.fastq.gz")
-							Cutadapt(TempR1, TempR2, _TempR1, _TempR2, PipelineConfig["Adapters"][item["Adapter"]], ReportTXT, PipelineConfig["Threads"], Logger)
+							Cutadapt(
+								InputR1 = TempR1,
+								InputR2 = TempR2,
+								OutputR1 = _TempR1,
+								OutputR2 = _TempR2,
+								Adapter = PipelineConfig["Adapters"][item["Adapter"]],
+								ReportTXT = ReportTXT,
+								Threads = PipelineConfig["Threads"],
+								Logger = Logger)
 							TempR1, TempR2 = _TempR1, _TempR2
-						
 						# Align
 						OutputBAM = os.path.join(TempDir, f"temp_{str(index)}.bam")
-						BWA(TempR1, TempR2, PipelineConfig["Reference"], item["RG"], OutputBAM, Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
+						BWA(
+							InputR1 = TempR1,
+							InputR2 = TempR2,
+							Reference = PipelineConfig["Reference"],
+							RGHeader = item["RG"],
+							OutputBAM = OutputBAM,
+							Logger = Logger,
+							Env = PipelineConfig["GATKCondaEnv"],
+							Threads = PipelineConfig["Threads"])
 						Shards += [ OutputBAM ]
 					if item["Type"] == "bam": pass # TODO
-				
 				# Merge & Copy
-				if len(Shards) > 1: MergeBAMs(Shards, FileNames["PrimaryBAM"], "queryname", Logger, PipelineConfig["GATKCondaEnv"])
-				else: SimpleSubprocess(f"{MODULE_NAME}.CopyBAM", f"cp \"{Shards[0]}\" \"{FileNames['PrimaryBAM']}\"", Logger)
-				SimpleSubprocess(f"{MODULE_NAME}.FlagStats", f"samtools flagstat -O tsv \"{FileNames['PrimaryBAM']}\" > \"{FileNames['PrimaryStats']}\"", Logger)
-			
+				if len(Shards) > 1:
+					MergeBAMs(
+						BAMs = Shards,
+						OutputBAM = FileNames["PrimaryBAM"],
+						SortOrder = "queryname",
+						Logger = Logger,
+						Env = PipelineConfig["GATKCondaEnv"])
+				else: 
+					SimpleSubprocess(
+						Name = f"{MODULE_NAME}.CopyBAM",
+						Command = f"cp \"{Shards[0]}\" \"{FileNames['PrimaryBAM']}\"",
+						Logger = Logger)
+				SimpleSubprocess(
+					Name = f"{MODULE_NAME}.FlagStats",
+					Command = f"samtools flagstat -O tsv \"{FileNames['PrimaryBAM']}\" > \"{FileNames['PrimaryStats']}\"",
+					Logger = Logger)
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 3:
-			
 			# Mark duplicates
-			MarkDuplicates(FileNames["PrimaryBAM"], FileNames["DuplessBAM"], FileNames["DuplessMetrics"], Logger, PipelineConfig["GATKCondaEnv"])
-			
+			MarkDuplicates(
+				InputBAM = FileNames["PrimaryBAM"],
+				OutputBAM = FileNames["DuplessBAM"],
+				MetricsTXT = FileNames["DuplessMetrics"],
+				Logger = Logger,
+				Env = PipelineConfig["GATKCondaEnv"])
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 4:
-			
 			# Base Recalibration
-			BaseRecalibration(FileNames["DuplessBAM"], FileNames["RecalBAM"], PipelineConfig["dbSNP"], PipelineConfig["Reference"], PipelineConfig["GATK_ConfigFile"], Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
-			
+			BaseRecalibration(
+				InputBAM = FileNames["DuplessBAM"],
+				OutputBAM = FileNames["RecalBAM"],
+				dbSNP = PipelineConfig["dbSNP"],
+				Reference = PipelineConfig["Reference"],
+				GATK_ConfigFile = PipelineConfig["GATK_ConfigFile"],
+				Logger = Logger, 
+				Env = PipelineConfig["GATKCondaEnv"],
+				Threads = PipelineConfig["Threads"])
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 5:
-			
 			# Coverage Stats
-			CoverageStats(Unit['ID'], FileNames["RecalBAM"], FileNames["CoverageStats"], PipelineConfig["Capture"], PipelineConfig["Reference"], Logger)
-			
+			CoverageStats(
+				Name = Unit['ID'],
+				FinalBAM = FileNames["RecalBAM"],
+				StatsTXT = FileNames["CoverageStats"],
+				CaptureBED = PipelineConfig["Capture"],
+				Reference = PipelineConfig["Reference"],
+				Logger = Logger)
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
 		if Unit["Stage"] == 6:
-			
 			# Variant Calling
-			HaplotypeCalling(FileNames["RecalBAM"], FileNames["VCF"], PipelineConfig["Reference"], Logger, PipelineConfig["GATKCondaEnv"], Threads=PipelineConfig["Threads"])
-			
-			# Timestamp
-			Logger.info(f"Unit {Unit['ID']} successfully finished, summary time - %s" % (SecToTime(time.time() - StartTime)))
-			
+			HaplotypeCalling(
+				InputBAM = FileNames["RecalBAM"],
+				OutputVCF = FileNames["VCF"],
+				Reference = PipelineConfig["Reference"],
+				Logger = Logger,
+				Env = PipelineConfig["GATKCondaEnv"],
+				Threads = PipelineConfig["Threads"])
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
-	
+			Logger.info(f"Unit {Unit['ID']} successfully finished, summary time - %s" % (SecToTime(time.time() - StartTime)))
+			
 	HarvestStats(
 		Units = Protocol["Units"],
 		Options = Protocol["Options"])
