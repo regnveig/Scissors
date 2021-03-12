@@ -4,47 +4,58 @@ from src.SharedFunctions import *
 
 ## Trimming & Convertation Reads
 
-def Solid2Illumina(InputFQ: str,
-				   OutputFQ: str,
-				   Logger: logging.Logger) -> None:
+def Solid2Illumina(
+		InputFQ: str,
+		OutputFQ: str,
+		Logger: logging.Logger) -> None:
+	
 	MODULE_NAME = "Solid2Illumina"
+	
 	# Logging
-	for line in [
-		f"Input FASTQ: {InputFQ}",
-		f"Output FASTQ: {OutputFQ}"]: Logger.info(line)
+	for line in [f"Input FASTQ: {InputFQ}", f"Output FASTQ: {OutputFQ}"]: Logger.info(line)
+	
 	# Processing
 	SimpleSubprocess(
 		Name = f"{MODULE_NAME}.Convert",
 		Command = f"cutadapt -c --format=sra-fastq --bwa --action=none -o \"{OutputFQ}\" \"{InputFQ}\"",
 		Logger = Logger)
 	
-def Cutadapt(InputR1: str,
-			 InputR2: str,
-			 OutputR1: Union[str, None],
-			 OutputR2: Union[str, None],
-			 Adapter: dict,
-			 ReportTXT: str,
-			 Threads: int,
-			 Logger: logging.Logger) -> None:
+def Cutadapt(
+		InputR1: str,
+		InputR2: str,
+		OutputR1: Union[str, None],
+		OutputR2: Union[str, None],
+		Adapter: dict,
+		ReportTXT: str,
+		Threads: int,
+		Logger: logging.Logger) -> None:
+	
 	MODULE_NAME = "Cutadapt"
+	
 	# Logging
 	for line in ([f"Mode: Single-end", f"Input FASTQ: {InputR1}", f"Output FASTQ: {OutputR1}"] if InputR2 is None else [f"Mode: Paired-end", f"Input FASTQ [R1]: {InputR1}", f"Input FASTQ [R2]: {InputR2}", f"Output FASTQ [R1]: {OutputR1}", f"Output FASTQ [R2]: {OutputR2}"]) + [f"Adapter: {Adapter['Name']}"]: Logger.info(line)
+	
 	# Processing
 	SimpleSubprocess(
 		Name = f"{MODULE_NAME}.Trim",
 		Command = f"cutadapt -j {str(Threads)} -e 0.2 -m 8 -a {Adapter['R1']} -o \"{OutputR1}\" \"{InputR1}\" > \"{ReportTXT}\"" if InputR2 is None else f"cutadapt -j {str(Threads)} -e 0.2 -m 8 -a {Adapter['R1']} -A {Adapter['R2']} -o \"{OutputR1}\" -p \"{OutputR2}\" \"{InputR1}\" \"{InputR2}\" > \"{ReportTXT}\"",
 		Logger = Logger)
 
-def FastQC(InputFastQ: str,
-		   OutputHTML: str,
-		   Logger: logging.Logger,
-		   Size: int = 0,
-		   Threads: int = cpu_count()) -> None:
+def FastQC(
+		InputFastQ: str,
+		OutputHTML: str,
+		Logger: logging.Logger,
+		Size: int = 0,
+		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "FastQC"
+	
 	# Logging
 	for line in [f"FastQ: {InputFastQ}", f"Report: {OutputHTML}"]: Logger.info(line)
+	
 	# Processing
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		AnalyzeFilename = InputFastQ
 		if Size != 0:
 			Logger.info(f"Subsample: {str(Size)}")
@@ -70,7 +81,8 @@ def FastQC(InputFastQ: str,
 
 ## Alignment & Merge BAMs
 
-def BWA(InputR1: str,
+def BWA(
+		InputR1: str,
 		InputR2: Union[str, None],
 		Reference: str,
 		RGHeader: str,
@@ -78,11 +90,15 @@ def BWA(InputR1: str,
 		Logger: logging.Logger,
 		Env: str,
 		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "BWA"
+	
 	# Logging
 	for line in ([f"Reads: {InputR1}"] if InputR2 is None else [f"R1: {InputR1}", f"R2: {InputR2}"]) + [f"Output BAM: {OutputBAM}", f"Reference: {Reference}", f"RG Header: {RGHeader}"]: Logger.info(line)
+	
 	# Processing
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.AlignAndSort",
 			Command = f"bwa mem -R \"{RGHeader}\" -t {str(Threads)} -v 1 \"{Reference}\" \"{InputR1}\" | gatk SortSam --VERBOSITY ERROR --TMP_DIR \"{TempDir}\" -SO queryname -I \"/dev/stdin\" -O \"{OutputBAM}\"" if (InputR2 is None) else f"bwa mem -R \"{RGHeader}\" -t {str(Threads)} -v 1 \"{Reference}\" \"{InputR1}\" \"{InputR2}\" | gatk SortSam --VERBOSITY ERROR --TMP_DIR \"{TempDir}\" -SO queryname -I \"/dev/stdin\" -O \"{OutputBAM}\"",
@@ -90,12 +106,15 @@ def BWA(InputR1: str,
 			CheckPipefail = True,
 			Env = Env)
 
-def MergeBAMs(BAMs: list,
-			  OutputBAM: str,
-			  SortOrder: str,
-			  Logger: logging.Logger,
-			  Env: str) -> None:
+def MergeBAMs(
+		BAMs: list,
+		OutputBAM: str,
+		SortOrder: str,
+		Logger: logging.Logger,
+		Env: str) -> None:
+	
 	MODULE_NAME = "MergeBAMs"
+	
 	# Processing
 	SimpleSubprocess(
 		Name = f"{MODULE_NAME}.Merge",
@@ -105,18 +124,24 @@ def MergeBAMs(BAMs: list,
 
 ## Mark Duplicates
 
-def MarkDuplicates(InputBAM: str,
-				   OutputBAM: str,
-				   MetricsTXT: str,
-				   Logger: logging.Logger,
-				   Env: str) -> None:
+def MarkDuplicates(
+		InputBAM: str,
+		OutputBAM: str,
+		MetricsTXT: str,
+		Logger: logging.Logger,
+		Env: str) -> None:
+	
 	MODULE_NAME = "MarkDuplicates"
+	
 	# Logging
 	for line in [f"Input: {InputBAM}", f"Output: {OutputBAM}", f"Metrics: {MetricsTXT}"]: Logger.info(line)
+	
 	# Options
 	JavaOptions = f"-XX:+UseParallelGC -XX:ParallelGCThreads=2" # -Xmx12G removed, can't see the sense of memory limits if the process is single-threaded.
+	
 	# Processing
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.RemoveAndSort",
 			Command = f"gatk --java-options \"{JavaOptions}\" MarkDuplicates --REMOVE_DUPLICATES true --VERBOSITY ERROR --ASSUME_SORT_ORDER queryname --TMP_DIR \"{TempDir}\" -M \"{MetricsTXT}\" -I \"{InputBAM}\" -O \"/dev/stdout\" | gatk SortSam --VERBOSITY ERROR --TMP_DIR \"{TempDir}\" -SO coordinate -I \"/dev/stdin\" -O \"{OutputBAM}\"",
@@ -126,23 +151,27 @@ def MarkDuplicates(InputBAM: str,
 
 ## BQSR
 
-def ContigBaseRecalibration(Contig: str,
-							InputBAM: str,
-							TempDir: str,
-							dbSNP: str,
-							Reference: str,
-							GATK_ConfigFile: str,
-							Logger: logging.Logger,
-							Env: str) -> str:
+def ContigBaseRecalibration(
+		Contig: str,
+		InputBAM: str,
+		TempDir: str,
+		dbSNP: str,
+		Reference: str,
+		GATK_ConfigFile: str,
+		Logger: logging.Logger,
+		Env: str) -> str:
+	
 	MODULE_NAME = "ContigBaseRecalibration"
+	
 	# Options
-	FiltersComparison = ["MappedReadFilter", "MappingQualityAvailableReadFilter", "MappingQualityNotZeroReadFilter", "NotDuplicateReadFilter", "NotSecondaryAlignmentReadFilter", "PassesVendorQualityCheckReadFilter"] 
+	FiltersComparison = ["MappedReadFilter", "MappingQualityAvailableReadFilter", "MappingQualityNotZeroReadFilter", "NotDuplicateReadFilter", "NotSecondaryAlignmentReadFilter", "PassesVendorQualityCheckReadFilter"]
 	# This is a bug above. BaseRecalibrator and ApplyBQSR filter reads differently,
 	# so ApplyBQSR f***s up every time it can't find RG.
 	BaseRecalibrator_JavaOptions = f"-Xmx3G -XX:+UseParallelGC -XX:ParallelGCThreads=2"
 	ApplyBQSR_JavaOptions = f"-Xmx3G"
 	BQSRTable = os.path.join(TempDir, f"bqsr_table_{Contig}.tsv")
 	OutputBAM = os.path.join(TempDir, f"output_{Contig}.bam")
+	
 	# Processing
 	SimpleSubprocess(
 		Name = f"{MODULE_NAME}.MakeTable[{Contig}]",
@@ -154,24 +183,31 @@ def ContigBaseRecalibration(Contig: str,
 		Command = f"gatk --java-options \"{ApplyBQSR_JavaOptions}\" ApplyBQSR --gatk-config-file \"{GATK_ConfigFile}\" {MultipleTags(Tag='-RF', List=FiltersComparison, Quoted=False)} --tmp-dir \"{TempDir}\" -OBI false -L {Contig} -bqsr \"{BQSRTable}\" -I \"{InputBAM}\" -O \"{OutputBAM}\"",
 		Logger = Logger,
 		Env = Env)
+	
 	# Return
 	return OutputBAM
 
-def BaseRecalibration(InputBAM: str,
-					  OutputBAM: str,
-					  dbSNP: str,
-					  Reference: str,
-					  GATK_ConfigFile: str,
-					  Logger: logging.Logger,
-					  Env: str,
-					  Threads: int = cpu_count()) -> None:
+def BaseRecalibration(
+		InputBAM: str,
+		OutputBAM: str,
+		dbSNP: str,
+		Reference: str,
+		GATK_ConfigFile: str,
+		Logger: logging.Logger,
+		Env: str,
+		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "BaseRecalibration"
+	
 	# Logging
 	for line in [f"Input: {InputBAM}", f"Output: {OutputBAM}", f"Known sites: {dbSNP}", f"Reference: {Reference}"]: Logger.info(line)
+	
 	# Options
 	Contigs = [item['SN'] for item in GetContigs(FileBAM=InputBAM)]
+	
 	# Processing
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.PreIndex",
 			Command = f"gatk BuildBamIndex -I \"{InputBAM}\"",
@@ -200,38 +236,49 @@ def BaseRecalibration(InputBAM: str,
 
 ## Haplotype Calling
 
-def ContigHaplotypeCalling(Contig: str,
-						   InputBAM: str,
-						   TempDir: str,
-						   Reference: str,
-						   Logger: logging.Logger,
-						   Env: str) -> str:
+def ContigHaplotypeCalling(
+		Contig: str,
+		InputBAM: str,
+		TempDir: str,
+		Reference: str,
+		Logger: logging.Logger,
+		Env: str) -> str:
+	
 	MODULE_NAME = "ContigHaplotypeCalling"
+	
 	# Options
 	JavaOptions = f"-Xmx3G"
 	OutputVCF = os.path.join(TempDir, f"output_{Contig}.vcf")
+	
 	# Processing
 	SimpleSubprocess(
 		Name = f"{MODULE_NAME}.Calling[{Contig}]",
 		Command = f"gatk --java-options \"{JavaOptions}\" HaplotypeCaller --native-pair-hmm-threads 2 -OVI false --dont-use-soft-clipped-bases true -L {Contig} -I \"{InputBAM}\" -O \"{OutputVCF}\" -R \"{Reference}\"",
 		Logger = Logger,
 		Env = Env)
+	
 	# Return
 	return OutputVCF
 
-def HaplotypeCalling(InputBAM: str,
-					 OutputVCF: str,
-					 Reference: str,
-					 Logger: logging.Logger,
-					 Env: str,
-					 Threads: int = cpu_count()) -> None:
+def HaplotypeCalling(
+		InputBAM: str,
+		OutputVCF: str,
+		Reference: str,
+		Logger: logging.Logger,
+		Env: str,
+		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "HaplotypeCalling"
+	
 	# Logging
 	for line in [f"Input BAM: {InputBAM}", f"Output VCF: {OutputVCF}", f"Reference: {Reference}"]: Logger.info(line)
+	
 	# Options
 	Contigs = [item['SN'] for item in GetContigs(FileBAM=InputBAM)]
+	
 	# Processing
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		with Threading("ContigHaplotypeCalling", Logger, Threads) as pool:
 			Shards = pool.map(functools.partial(
 				ContigHaplotypeCalling,
@@ -248,22 +295,28 @@ def HaplotypeCalling(InputBAM: str,
 
 ## Statistics
 
-def CoverageStats(Name: str,
-				  FinalBAM: str,
-				  StatsTXT: str,
-				  CaptureBED: str,
-				  Reference: str,
-				  Logger: logging.Logger) -> None:
+def CoverageStats(
+		Name: str,
+		FinalBAM: str,
+		StatsTXT: str,
+		CaptureBED: str,
+		Reference: str,
+		Logger: logging.Logger) -> None:
+	
 	MODULE_NAME = "CoverageStats"
+	
 	# Logging
 	for line in [f"BAM File: {FinalBAM}", f"Reference: {Reference}", f"Capture BED: {CaptureBED}"]: Logger.info(line)
+	
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		# Options
 		RefIndex = f"{Reference}.fai"
 		NotCaptureBED = os.path.join(TempDir, "not_capture.bed")
 		CaptureTemp = os.path.join(TempDir, "capture.csv")
 		NotCaptureTemp = os.path.join(TempDir, "not_capture.csv")
 		GenomeBED = os.path.join(TempDir, "genome.bed")
+		
 		# Coverage
 		PrepareGenomeBED(
 			Reference = Reference,
@@ -281,9 +334,11 @@ def CoverageStats(Name: str,
 			Name = f"{MODULE_NAME}.NotCaptureCoverage",
 			Command = f"bedtools coverage -hist -sorted -g \"{RefIndex}\" -a \"{NotCaptureBED}\" -b \"{FinalBAM}\" | grep -P \"^all.*$\" > \"{NotCaptureTemp}\"",
 			Logger = Logger)
+		
 		# Load
 		CaptureData = pandas.read_csv(CaptureTemp, sep='\t', header=None, dtype={1: int, 4: float})[[1, 4]]
 		NotCaptureData = pandas.read_csv(NotCaptureTemp, sep='\t', header=None, dtype={1: int, 4: float})[[1, 4]]
+	
 	# Report Compilation
 	Result = {
 		"Name": [Name],
@@ -305,12 +360,14 @@ def CoverageStats(Name: str,
 		f"# Reference: {Reference}",
 		f"# Capture: {CaptureBED}",
 		pandas.DataFrame(Result).to_csv(sep='\t', index=False, float_format='%.3f')])
+	
 	# Report Save
 	with open(StatsTXT, 'wt') as StatsFile: StatsFile.write(Report)
 
 def HarvestStats(
-	Units: list,
-	Options: dict) -> None:
+		Units: list,
+		Options: dict) -> None:
+	
 	MODULE_NAME = "HarvestStats"
 	
 	def FormatTable(item):
@@ -324,7 +381,9 @@ def HarvestStats(
 	
 	ReportFile = os.path.join(Options["PoolDir"], "summary.tsv")
 	Data = []
+	
 	for Unit in Units:
+		
 		FileNames = GenerateFileNames(Unit, Options)
 		MarkDupStats = io.StringIO(''.join(open(FileNames["DuplessMetrics"], 'rt').readlines()).split('\n\n')[1])
 		MarkDupStats = pandas.read_csv(MarkDupStats, sep='\t', comment='#').apply(lambda x: x.to_list(), axis=0, result_type="reduce").to_dict()
@@ -332,6 +391,7 @@ def HarvestStats(
 		PrimaryStats = pandas.read_csv(FileNames["PrimaryStats"], sep='\t', names=[f"QC-passed", f"QC-failed", "index"]).set_index("index")["QC-passed"].to_dict()
 		Result = {}
 		LibCount = list(range(len(MarkDupStats["LIBRARY"])))
+		
 		Result["ID|"] = Unit["ID"]
 		Result["Total|reads"] = int(PrimaryStats["total (QC-passed reads + QC-failed reads)"])
 		Result["Mapped|% of total"] = float(PrimaryStats["mapped %"][:-1])
@@ -359,9 +419,11 @@ def HarvestStats(
 		Result["Singleton dups|% of singletons"] = [int(MarkDupStats["UNPAIRED_READ_DUPLICATES"][i]) / Result["Singletons by lib|pairs/reads"][i] * 100 for i in LibCount]
 		Result["Duplication by lib|%"] = [float(x) * 100 for x in MarkDupStats["PERCENT_DUPLICATION"]]
 		Result["Estimated lib size|."] = [int(MarkDupStats["ESTIMATED_LIBRARY_SIZE"][i]) for i in LibCount]
+		
 		Result = pandas.DataFrame({key: [value] for key, value in Result.items()}).transpose()
 		Result = Result.applymap(FormatTable)
 		Data += [ dc(Result) ]
+	
 	Data = pandas.concat(Data, axis=1).reset_index()
 	Data = Data.set_index(Data["index"].apply(lambda x: x.split("|")[0]).rename(None))
 	Data["index"] = Data["index"].apply(lambda x: x.split("|")[1])
@@ -369,14 +431,15 @@ def HarvestStats(
 	Data.to_csv(ReportFile, sep='\t', index=False)
 	
 def ComposeRGTag(
-	FileName: str,
-	Sample: str,
-	Library: str,
-	Logger: logging.Logger) -> str:
+		FileName: str,
+		Sample: str,
+		Library: str,
+		Logger: logging.Logger) -> str:
 	
 	# TODO KnV
 	
 	MODULE_NAME = "ComposeRGTag"
+	
 	# Regex
 	LineFormats = {
 		"ILLUMINA;New;Barcode": "^@(?P<Instrument>[\\w-]+):(?P<Run>\\d+):(?P<FlowCellID>[\\w-]+):(?P<Lane>\\d+):(?P<Tile>\\d+):(?P<Xpos>\\d+):(?P<Ypos>\\d+) (?P<Read>[1|2]):(?P<Filtered>[Y|N]):(?P<ControlNumber>\\d*[02468]):(?P<Barcode>[ATGCN\\+]+)$",
@@ -389,7 +452,6 @@ def ComposeRGTag(
 		"ILLUMINA;NCBI_21;Sample": "^@(?P<Sample>[^\\.]+).* (?P<Instrument>[\\w-]+)\\.s_(?P<Samp>\\d+):(?P<Lane>\\d+):(?P<Tile>\\d+):(?P<Xpos>\\d+):(?P<Ypos>\\d+) length=\\d+$",
 		"ILLUMINA;NCBI_ihk;Sample": "^@(?P<Sample>[^\\.]+).* SL(?P<Lane>\\d+)_R(?P<Run>\\d+)_(?P<Instrument>[\\w-]+)_.* length=\\d+$"
 		}
-	
 	ReadName = OpenAnyway(FileName=FileName, Mode='r', Logger=Logger).readline().decode('utf-8')[:-1]
 		
 	# Apply regex
@@ -426,12 +488,15 @@ def ComposeRGTag(
 # ------======| DAEMONIC PIPELINE |======------
 
 def DaemonicPipe(
-	PipelineConfigFile: str,
-	UnitsFile: str) -> None:
+		PipelineConfigFile: str,
+		UnitsFile: str) -> None:
+	
 	MODULE_NAME = "DaemonicPipe"
 	Protocol, PipelineConfig, CurrentStage, BackupPossible = MakePipe(MODULE_NAME, PipelineConfigFile, UnitsFile) # MakePipe
+	
 	# Processing
 	for Unit in Protocol["Units"]:
+		
 		StartTime = time.time()
 		FileNames = GenerateFileNames(Unit, Protocol["Options"]) # Compose filenames
 		
@@ -463,6 +528,7 @@ def DaemonicPipe(
 				for index, item in enumerate(Unit["Input"]):
 					if item["Type"] == "fastq":
 						TempR1, TempR2 = item["R1"], item["R2"]
+						
 						# Convert SOLiD
 						if item["Format"] == 'solid':
 							_TempR1, _TempR2 = os.path.join(TempDir, f"solid2illumina_R1_{str(index)}.fastq.gz"), None if item["R2"] is None else os.path.join(TempDir, f"solid2illumina_R2_{str(index)}.fastq.gz")
@@ -476,6 +542,7 @@ def DaemonicPipe(
 									OutputFQ = _TempR2,
 									Logger = Logger)
 							TempR1, TempR2 = _TempR1, _TempR2
+						
 						# Trim
 						if item["Adapter"] is not None:
 							ReportTXT = os.path.join(Unit['OutputDir'], f"{Unit['ID']}.InputItem{str(index)}.cutadapt.txt")
@@ -490,6 +557,7 @@ def DaemonicPipe(
 								Threads = PipelineConfig["Threads"],
 								Logger = Logger)
 							TempR1, TempR2 = _TempR1, _TempR2
+						
 						# Align
 						OutputBAM = os.path.join(TempDir, f"temp_{str(index)}.bam")
 						BWA(
@@ -503,6 +571,7 @@ def DaemonicPipe(
 							Threads = PipelineConfig["Threads"])
 						Shards += [ OutputBAM ]
 					if item["Type"] == "bam": pass # TODO
+				
 				# Merge & Copy
 				if len(Shards) > 1:
 					MergeBAMs(
@@ -572,7 +641,7 @@ def DaemonicPipe(
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 			Logger.info(f"Unit {Unit['ID']} successfully finished, summary time - %s" % (SecToTime(time.time() - StartTime)))
-			
+	
 	HarvestStats(
 		Units = Protocol["Units"],
 		Options = Protocol["Options"])

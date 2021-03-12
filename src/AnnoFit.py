@@ -3,24 +3,29 @@ from src.SharedFunctions import *
 # ------======| ANNOVAR |======------
 
 def ANNOVAR(
-	InputVCF: str,
-	OutputTSV: str,
-	Databases: list,
-	DBFolder: str,
-	AnnovarFolder: str,
-	GenomeAssembly: str,
-	Logger: logging.Logger,
-	Threads: int = cpu_count()) -> None:
+		InputVCF: str,
+		OutputTSV: str,
+		Databases: list,
+		DBFolder: str,
+		AnnovarFolder: str,
+		GenomeAssembly: str,
+		Logger: logging.Logger,
+		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "ANNOVAR"
+	
 	# Logging
 	for line in [f"Input VCF: {InputVCF}", f"Output TSV: {OutputTSV}", f"Genome Assembly: {GenomeAssembly}", f"Databases Dir: {DBFolder}", f"Databases: {'; '.join([(item['Protocol'] + '[' + item['Operation'] + ']') for item in Databases])}"]: Logger.info(line)
+	
 	with tempfile.TemporaryDirectory() as TempDir:
+		
 		# Options
 		TableAnnovarPath = os.path.join(AnnovarFolder, "table_annovar.pl")
 		Protocol = ','.join([item["Protocol"] for item in Databases])
 		Operation = ','.join([item["Operation"] for item in Databases])
 		TempVCF = os.path.join(TempDir, "temp.vcf")
 		AnnotatedTXT = f"{TempVCF}.{GenomeAssembly}_multianno.txt"
+		
 		# Processing
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.TempVCF",
@@ -39,17 +44,20 @@ def ANNOVAR(
 # ------======| ANNOFIT |======------
 
 def AnnoFit(
-	InputTSV: str,
-	OutputXLSX: str,
-	HGMD: str,
-	AnnovarFolder: str,
-	AnnoFitConfigFile: str,
-	Logger: logging.Logger,
-	ChunkSize: int,
-	Threads: int = cpu_count()) -> None:
+		InputTSV: str,
+		OutputXLSX: str,
+		HGMD: str,
+		AnnovarFolder: str,
+		AnnoFitConfigFile: str,
+		Logger: logging.Logger,
+		ChunkSize: int,
+		Threads: int = cpu_count()) -> None:
+	
 	MODULE_NAME = "AnnoFit"
+	
 	# Logging
 	for line in [f"Input TSV: {InputTSV}", f"Output XLSX: {OutputXLSX}", f"Chunk Size: {str(ChunkSize)}"]: Logger.info(line)
+	
 	# Initialize Pandarallel
 	pandarallel.initialize(nb_workers=Threads, verbose=1)
 	
@@ -221,7 +229,7 @@ def AnnoFit(
 		#Data = Data[Filters["DP"]] # & PopMax_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
 		Logger.info(f"Base filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 		
-		#Concat chunk
+		#Concat chunks
 		Result = Data if Result is None else pandas.concat([Result, Data], axis=0, ignore_index=True)
 		Logger.info(f"Chunk #{str(ChunkNum + 1)} - %s" % (SecToTime(time.time() - ChunkTime)))
 	
@@ -271,10 +279,12 @@ def AnnoFit(
 # ------======| ANNOTATION PIPELINE |======------
 
 def AnnoPipe(
-	PipelineConfigFile: str,
-	UnitsFile: str) -> None:
+		PipelineConfigFile: str,
+		UnitsFile: str) -> None:
+	
 	MODULE_NAME = "AnnoPipe"
 	Protocol, PipelineConfig, CurrentStage, BackupPossible = MakePipe(MODULE_NAME, PipelineConfigFile, UnitsFile) # MakePipe
+	
 	# Processing
 	for Unit in Protocol["Units"]:
 		StartTime = time.time()
