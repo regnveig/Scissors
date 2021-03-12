@@ -1,8 +1,8 @@
 #!/bin/python3
 
 __author__ = "regnveig"
-__version__ = "0.2b"
-__date__ = "2020 Jul 23"
+__version__ = "0.3b"
+__date__ = "2021 Mar 12"
 
 import argparse
 import sys
