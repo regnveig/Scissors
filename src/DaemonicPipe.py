@@ -148,6 +148,11 @@ def MarkDuplicates(
 			Logger = Logger,
 			CheckPipefail = True,
 			Env = Env)
+		SimpleSubprocess(
+			Name = f"{MODULE_NAME}.Index",
+			Command = f"gatk BuildBamIndex -I \"{OutputBAM}\"",
+			Logger = Logger,
+			Env = Env)
 
 ## BQSR
 
@@ -485,6 +490,36 @@ def ComposeRGTag(
 	# Return
 	return f"@RG\\tID:{ID}\\tPL:{PL}\\tPU:{PU}\\tLB:{LB}\\tSM:{SM}"
 
+# ------======| PRIMARY FASTQ ANALYSIS |======------
+
+def PrimaryFastqAnalysis(
+		PipelineConfigFile: str,
+		UnitsFile: str) -> None:
+	
+	MODULE_NAME = "PrimaryFastqAnalysis"
+	PipelineConfig = json.load(open(PipelineConfigFile, 'rt'))
+	Protocol = json.load(open(UnitsFile, 'rt'))
+	Dir = os.path.join(Protocol["Options"]["PoolDir"], "Primary_Fastq_Analysis")
+	if not os.path.exists(Dir): os.mkdir(Dir)
+	
+	StartTime = time.time()
+	Logger = DefaultLogger(os.path.join(Dir, "log.txt"))
+	
+	for Unit in Protocol["Units"]:
+		for index, item in enumerate(Unit["Input"]):
+			if item["Type"] == "fastq" and item["Format"] == 'illumina':
+				OutputHTML = os.path.join(Dir, f"{Unit['ID']}.InputItem{str(index)}.fastqc.html")
+				for line in [f"Input FastQ: {item['R1']}", f"OutputHTML: {OutputHTML}", f"Sample size: {'unlimited' if PipelineConfig['FastQSampleSize'] == 0 else PipelineConfig['FastQSampleSize']}"]: Logger.info(line)
+				FastQC(
+					InputFastQ = item["R1"],
+					OutputHTML = OutputHTML,
+					Logger = Logger,
+					Size = PipelineConfig["FastQSampleSize"],
+					Threads = PipelineConfig["Threads"])
+	
+	Logger.info(f"Primary FastQ analysis successfully finished, summary time - %s" % (SecToTime(time.time() - StartTime)))
+
+
 # ------======| DAEMONIC PIPELINE |======------
 
 def DaemonicPipe(
@@ -513,7 +548,7 @@ def DaemonicPipe(
 			# Check/add/replace @RG
 			for item in Unit["Input"]:
 				if (item["Type"] == "fastq") and (item["RG"] is None):
-					ComposeRGTag(
+					item["RG"] = ComposeRGTag(
 						FileName = item["R1"],
 						Sample = item["Sample"],
 						Library = item["Library"],
@@ -557,6 +592,15 @@ def DaemonicPipe(
 								Threads = PipelineConfig["Threads"],
 								Logger = Logger)
 							TempR1, TempR2 = _TempR1, _TempR2
+						
+						# FastQC Analysis
+						OutputHTML = os.path.join(Unit['OutputDir'], f"{Unit['ID']}.InputItem{str(index)}.fastqc.html")
+						FastQC(
+							InputFastQ = TempR1,
+							OutputHTML = OutputHTML,
+							Logger = Logger,
+							Size = PipelineConfig["FastQSampleSize"],
+							Threads = PipelineConfig["Threads"])
 						
 						# Align
 						OutputBAM = os.path.join(TempDir, f"temp_{str(index)}.bam")

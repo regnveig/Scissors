@@ -29,6 +29,16 @@ def CreateParser():
 	AnnoPipeParser.add_argument('-c', '--config', default=os.path.join(CurrentDir, "config/DaemonicPipeline_config.json"), help=f"Pipeline Config File (default: config/DaemonicPipeline_config.json)")
 	AnnoPipeParser.add_argument('-u', '--units', required=True, help=f"Units File in JSON format")
 	
+	# PrepareReference
+	PrepareReferenceParser = Subparsers.add_parser('PrepareReference', help=f"Prepare reference sequence for Scissors")
+	PrepareReferenceParser.add_argument('-c', '--config', default=os.path.join(CurrentDir, "config/DaemonicPipeline_config.json"), help=f"Pipeline Config File (default: config/DaemonicPipeline_config.json)")
+	PrepareReferenceParser.add_argument('-r', '--reference', required=True, help=f"Reference sequence file in FASTA format")
+	
+	# PrimaryFastqAnalysis
+	PrimaryFastqAnalysisParser = Subparsers.add_parser('PrimaryFastqAnalysis', help=f"Pool Primary FastQ Analysis by FastQC")
+	PrimaryFastqAnalysisParser.add_argument('-c', '--config', default=os.path.join(CurrentDir, "config/DaemonicPipeline_config.json"), help=f"Pipeline Config File (default: config/DaemonicPipeline_config.json)")
+	PrimaryFastqAnalysisParser.add_argument('-u', '--units', required=True, help=f"Units File in JSON format")
+	
 	return Parser
 
 if __name__ == '__main__':
@@ -38,4 +48,7 @@ if __name__ == '__main__':
 	
 	if Namespace.command == "DaemonicPipe": DaemonicPipe(Namespace.config, Namespace.units)
 	elif Namespace.command == "AnnoPipe": AnnoPipe(Namespace.config, Namespace.units)
+	elif Namespace.command == "PrepareReference": PrepareReference(Namespace.reference, Namespace.config)
+	elif Namespace.command == "PrimaryFastqAnalysis": PrimaryFastqAnalysis(Namespace.config, Namespace.units)
+		
 	else: Parser.print_help()

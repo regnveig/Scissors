@@ -1,7 +1,8 @@
 {
 	"GenomeAssembly": "hg19", 
 	"Reference": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.fa",
-	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
+	"Capture1": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
+	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed",
 	
 	"FastQSampleSize": 1000000,
 	"Threads": 10,

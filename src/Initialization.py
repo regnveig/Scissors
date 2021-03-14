@@ -2,13 +2,16 @@ from src.SharedFunctions import *
 
 def PrepareReference(
 		Reference: str,
-		Logger: logging.Logger,
-		Env: str) -> None:
+		PipelineConfigFile: str,
+		Logger: logging.Logger = DefaultLogger("/dev/null")) -> None:
 	
 	MODULE_NAME = "PrepareReference"
 	
 	# Logging
 	for line in [f"Reference: {Reference}"]: Logger.info(line)
+	
+	# Options
+	Env = json.load(open(PipelineConfigFile, 'rt'))["GATKCondaEnv"]
 	
 	# Processing
 	SimpleSubprocess(
