@@ -156,7 +156,7 @@ def CureBase(
 		for Col in list(NewColumns.keys()):
 			NewCols = Data[Col][Data[Col] != '.']
 			if NewCols.size > 0:
-				NewCols = NewCols.parallel_apply(lambda LD: pandas.Series({str(NewColumns[Col]): "yes"} if not LD[0] else {f"{str(NewColumns[Col])}.{str(k)}": [dic[k] for dic in LD] for k in LD[0]}))
+				NewCols = NewCols.parallel_apply(lambda LD: pandas.Series({str(NewColumns[Col]): ["yes"]} if not LD[0] else {f"{str(NewColumns[Col])}.{str(k)}": [dic[k] for dic in LD] for k in LD[0]}))
 				Data = pandas.concat([Data, NewCols], axis=1)
 			else: Logger.warning(f"Database has no intersections with variants: {str(NewColumns[Col])}")
 		Data = Data.drop(columns=list(NewColumns.keys()))
@@ -442,7 +442,7 @@ def AnnoPipe(
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
 		
-		if Unit["Stage"] == 2:
+		if Unit["Stage"] == 1:
 			AnnoFit(
 				InputTSV = FileNames["AnnovarTable"],
 				OutputXLSX = FileNames["FilteredXLSX"],
