@@ -2,7 +2,7 @@
 	"GenomeAssembly": "hg19", 
 	"Reference": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.fa",
 	"Capture1": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
-	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed",
+	"Capture1": "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed",
 	
 	"FastQSampleSize": 1000000,
 	"Threads": 10,
@@ -170,6 +170,114 @@
 			"Operation": "f",
 			"Comment": "whole genome GWAVA_region_score and GWAVA_tss_score (GWAVA_unmatched_score has bug in file)",
 			"Database": "gwava"
+		}
+	],
+	"GFF31": [
+		{
+			"Name": "ENCODE_Blacklist",
+			"FileName": "db/Problematic_Regions/ENCODE_Blacklist",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "Low mappability or high signal regions (doi: 10.1038/s41598-019-45839-z)"
+		}
+	],
+	"GFF3": [
+		{
+			"Name": "ENCODE_Blacklist",
+			"FileName": "db/Problematic_Regions/ENCODE_Blacklist",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "Low mappability or high signal regions (doi: 10.1038/s41598-019-45839-z)"
+		},
+		{
+			"Name": "GIAB_AlignProblem",
+			"FileName": "db/Problematic_Regions/GIAB_AlignProblem",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "GIAB_AlleleImbalance",
+			"FileName": "db/Problematic_Regions/GIAB_AlleleImbalance",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "GIAB_CallConflict",
+			"FileName": "db/Problematic_Regions/GIAB_CallConflict",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "GIAB_FilterSSE",
+			"FileName": "db/Problematic_Regions/GIAB_FilterSSE",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "GIAB_GenotypeConflict",
+			"FileName": "db/Problematic_Regions/GIAB_GenotypeConflict",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "GIAB_QualityIssue",
+			"FileName": "db/Problematic_Regions/GIAB_QualityIssue",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": ""
+		},
+		{
+			"Name": "NCBI_NGS_DeadZone",
+			"FileName": "db/Problematic_Regions/NCBI_NGS_DeadZone",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "Intervals that cannot be reliably analyzed by standard next-generation sequencing (NGS)"
+		},
+		{
+			"Name": "NCBI_NGS_HighStringency",
+			"FileName": "db/Problematic_Regions/NCBI_NGS_HighStringency",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "During nucleic acid hybridization or reassociation, stringency is the strictness with which the Watson-Crick base-pairing is required under specified conditions of temperature, pH, salt concentration, etc. Conditions of high stringency require all bases of one polynucleotide to be paired with complementary bases on the other"
+		},
+		{
+			"Name": "NCBI_NGS_LowStringency",
+			"FileName": "db/Problematic_Regions/NCBI_NGS_LowStringency",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "During nucleic acid hybridization or reassociation, stringency is the strictness with which the Watson-Crick base-pairing is required under specified conditions of temperature, pH, salt concentration, etc. Conditions of low stringency allow some bases of one polynucleotide to be unpaired with complementary bases on the other"
+		},
+		{
+			"Name": "NCBI_Sanger_DeadZone",
+			"FileName": "db/Problematic_Regions/NCBI_Sanger_DeadZone",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "Intervals that cannot be reliably analyzed by Sanger sequencing"
+		},
+		{
+			"Name": "UCSC_UnusualRegions",
+			"FileName": "db/Problematic_Regions/UCSC_UnusualRegions",
+			"ChromColumn": "#chrom",
+			"StartColumn": "chromStart",
+			"EndColumn": "chromEnd",
+			"Comment": "UCSC Unusual Regions with comments"
 		}
 	]
 }

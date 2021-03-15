@@ -429,6 +429,8 @@ def HarvestStats(
 		Result = Result.applymap(FormatTable)
 		Data += [ dc(Result) ]
 	
+	# TODO Add cutadapt output
+	
 	Data = pandas.concat(Data, axis=1).reset_index()
 	Data = Data.set_index(Data["index"].apply(lambda x: x.split("|")[0]).rename(None))
 	Data["index"] = Data["index"].apply(lambda x: x.split("|")[1])

@@ -5,6 +5,7 @@ from multiprocessing import cpu_count, Pool
 from pandarallel import pandarallel
 from typing import Union
 import bz2
+import base64
 import datetime
 import functools
 import gzip
@@ -87,6 +88,7 @@ def GenerateFileNames(
 		"CoverageStats": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.coverage.txt"),
 		"VCF": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.unfiltered.vcf"),
 		"AnnovarTable": os.path.join(IRs, f"{Unit['ID']}.annovar.tsv"),
+		"Gff3Table": os.path.join(IRs, f"{Unit['ID']}.curebase.tsv"),
 		"FilteredXLSX": os.path.join(Unit['OutputDir'], f"{Unit['ID']}.AnnoFit.xlsx")
 	}
 	return FileNames

@@ -5,24 +5,28 @@ from src.SharedFunctions import *
 def ANNOVAR(
 		InputVCF: str,
 		OutputTSV: str,
-		Databases: list,
 		DBFolder: str,
 		AnnovarFolder: str,
 		GenomeAssembly: str,
 		Logger: logging.Logger,
+		Databases: list = [],
+		GFF3List: list = [],
 		Threads: int = cpu_count()) -> None:
 	
 	MODULE_NAME = "ANNOVAR"
 	
+	assert bool(Databases) != bool(GFF3List), f"Either Databases or GFF3 files must be defined"
+	
 	# Logging
-	for line in [f"Input VCF: {InputVCF}", f"Output TSV: {OutputTSV}", f"Genome Assembly: {GenomeAssembly}", f"Databases Dir: {DBFolder}", f"Databases: {'; '.join([(item['Protocol'] + '[' + item['Operation'] + ']') for item in Databases])}"]: Logger.info(line)
+	for line in [f"Input VCF: {InputVCF}", f"Output TSV: {OutputTSV}", f"Genome Assembly: {GenomeAssembly}", f"Databases Dir: {DBFolder}"] + ([] if not Databases else [f"Databases: {'; '.join([(item['Protocol'] + '[' + item['Operation'] + ']') for item in Databases])}"]) + ([] if not GFF3List else [f"Databases: GFF3, {len(GFF3List)} items [r]"]): Logger.info(line)
 	
 	with tempfile.TemporaryDirectory() as TempDir:
 		
 		# Options
 		TableAnnovarPath = os.path.join(AnnovarFolder, "table_annovar.pl")
-		Protocol = ','.join([item["Protocol"] for item in Databases])
-		Operation = ','.join([item["Operation"] for item in Databases])
+		Protocol = ','.join([item["Protocol"] for item in Databases] + ["gff3" for item in GFF3List])
+		Operation = ','.join([item["Operation"] for item in Databases] + ["r" for item in GFF3List])
+		GFFs = "--gff3dbfile " + ','.join(GFF3List)
 		TempVCF = os.path.join(TempDir, "temp.vcf")
 		AnnotatedTXT = f"{TempVCF}.{GenomeAssembly}_multianno.txt"
 		
@@ -33,13 +37,135 @@ def ANNOVAR(
 			Logger = Logger)
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.Annotation",
-			Command = f"perl \"{TableAnnovarPath}\" \"{TempVCF}\" \"{DBFolder}\" --buildver {GenomeAssembly} --protocol {Protocol} --operation {Operation} --remove --vcfinput --thread {Threads}",
+			Command = f"perl \"{TableAnnovarPath}\" \"{TempVCF}\" \"{DBFolder}\" --buildver {GenomeAssembly} --protocol {Protocol} --operation {Operation} {GFFs} --remove --vcfinput --thread {Threads}",
 			Logger = Logger,
 			AllowedCodes = [25])
 		SimpleSubprocess(
 			Name = f"{MODULE_NAME}.CopyTSV",
 			Command = f"cp \"{AnnotatedTXT}\" \"{OutputTSV}\"",
 			Logger = Logger)
+
+# ------======| CUSTOM REGION-BASED ANNOTATIONS |======------
+
+def Tsv2Gff3(
+		dbName: str,
+		InputTSV: str,
+		ChromCol: str,
+		StartCol: str,
+		EndCol: str,
+		OutputGFF3: str,
+		Reference: str,
+		Logger: logging.Logger,
+		Threads: int) -> None:
+	
+	MODULE_NAME = "Tsv2Gff3"
+	
+	pandarallel.initialize(nb_workers=Threads, verbose=1)
+	
+	# Logging
+	for line in [f"Name: {dbName}", f"Input TSV db: {InputTSV}", f"Output GFF3: {OutputGFF3}"]: Logger.info(line)
+	
+	# Options
+	AnchorCols = [ChromCol, StartCol, EndCol]
+	DataOrder = [ChromCol, "sample", "type", StartCol, EndCol, "score", "strand", "phase", "attributes"]
+	
+	# Prepare faidx
+	Faidx = pandas.read_csv(Reference + ".fai", sep='\t', header=None).assign(Tag="##sequence-region", Start=1)[["Tag", 0, "Start", 1]]
+	Chroms = {value: index for index, value in enumerate(Faidx[0].to_list())}
+	
+	# Load data
+	Data = pandas.read_csv(InputTSV, sep='\t')
+	AttributeCols = [item for item in Data.columns.to_list() if item not in AnchorCols]
+	
+	# Filter & sort intervals by reference
+	Filtered = [item for item in list(set(Data[ChromCol].to_list())) if item not in Chroms.keys()]
+	if Filtered: Logger.warning(f"Contigs will be removed from database \"{dbName}\": {', '.join(sorted(Filtered))}")
+	Data = Data[Data[ChromCol].parallel_apply(lambda x: x in Chroms.keys())]
+	Data["Rank"] = Data[ChromCol].map(Chroms)
+	Data.sort_values(["Rank", StartCol], inplace=True)
+	if Data.shape[0] == 0:
+		ErrorMessage = f"Database \"{dbName}\" and reference \"{Reference}\" have no matching columns"
+		Logger.error(ErrorMessage)
+		raise RuntimeError(ErrorMessage)
+	
+	# Processing
+	Attributes = Data[AttributeCols].parallel_apply(lambda x: "ID=" + base64.b16encode(json.dumps(x.to_dict()).encode('utf-8')).decode('utf-8'), axis=1)
+	Data.drop(columns=AttributeCols, inplace=True)
+	Data[StartCol] = Data[StartCol].parallel_apply(lambda x: 1 if x == 0 else x)
+	Data = Data.assign(sample=dbName, type="region", attributes=Attributes,	score=".", strand=".", phase=".")[DataOrder]
+	
+	# Save
+	with open(OutputGFF3, 'wt') as O:
+		O.write(
+			"##gff-version 3\n" +
+			Faidx.to_csv(sep=' ', index=False, header=False) + 
+			Data.to_csv(sep='\t', index=False, header=False))
+	
+	# Return expected cols
+	return [f"{str(dbName)}.{str(item)}" for item in AttributeCols] if AttributeCols else [ str(dbName) ]
+
+def CureBase(
+		InputVCF: str,
+		OutputTSV: str,
+		Databases: list,
+		AnnovarFolder: str,
+		GenomeAssembly: str,
+		Reference: str,
+		Logger: logging.Logger,
+		Threads: int) -> None:
+	
+	MODULE_NAME = "CureBase"
+	
+	# Initialize Pandarallel
+	pandarallel.initialize(nb_workers=Threads, verbose=1)
+	
+	with tempfile.TemporaryDirectory() as TempDir:
+		
+		Gff3List, ExpectedCols = [], []
+		
+		for index, DB in enumerate(Databases):
+			Gff3File = os.path.join(TempDir, f"database_{str(index)}.gff3")
+			ExpectedCols += Tsv2Gff3(
+				dbName = DB["Name"],
+				InputTSV = DB["FileName"],
+				ChromCol = DB["ChromColumn"],
+				StartCol = DB["StartColumn"],
+				EndCol = DB["EndColumn"],
+				OutputGFF3 = Gff3File,
+				Reference = Reference,
+				Logger = Logger,
+				Threads = Threads)
+			Gff3List += [ f"database_{str(index)}.gff3" ]
+		
+		TempTSV = os.path.join(TempDir, f"temp.tsv")
+		ANNOVAR(
+			InputVCF = InputVCF,
+			OutputTSV = TempTSV,
+			GFF3List = Gff3List,
+			DBFolder = TempDir,
+			AnnovarFolder = AnnovarFolder,
+			GenomeAssembly = GenomeAssembly,
+			Logger = Logger,
+			Threads = Threads)
+		
+		SNPdata = ['Chr', 'Start', 'End', 'Ref', 'Alt']
+		Data = pandas.read_csv(TempTSV, sep='\t', dtype=str)
+		NewColumns = {f"gff3{'' if index == 0 else str(index + 1)}": item["Name"] for index, item in enumerate(Databases)}
+		Data = Data[SNPdata + list(NewColumns.keys())]
+		Data[list(NewColumns.keys())] = Data[list(NewColumns.keys())].parallel_applymap(lambda x: '.' if x == '.' else [json.loads(base64.b16decode(item.encode('utf-8')).decode('utf-8')) for item in x.split("=")[1].split(",")])
+		for Col in list(NewColumns.keys()):
+			NewCols = Data[Col][Data[Col] != '.']
+			if NewCols.size > 0:
+				NewCols = NewCols.parallel_apply(lambda LD: pandas.Series({str(NewColumns[Col]): "yes"} if not LD[0] else {f"{str(NewColumns[Col])}.{str(k)}": [dic[k] for dic in LD] for k in LD[0]}))
+				Data = pandas.concat([Data, NewCols], axis=1)
+			else: Logger.warning(f"Database has no intersections with variants: {str(NewColumns[Col])}")
+		Data = Data.drop(columns=list(NewColumns.keys()))
+		MissingCols = [item for item in ExpectedCols if item not in Data.columns.to_list()]
+		Data[MissingCols] = float("nan")
+		InformationCols = [item for item in Data.columns.to_list() if item not in SNPdata]
+		Data[InformationCols] = Data[InformationCols].parallel_applymap(lambda x: '.' if x != x else '; '.join([str(item) for item in sorted(list(set(x)))]))
+		Data = Data[SNPdata + ExpectedCols]
+		Data.to_csv(OutputTSV, sep='\t', index=False)
 
 # ------======| ANNOFIT |======------
 
@@ -292,6 +418,7 @@ def AnnoPipe(
 		Logger = DefaultLogger(FileNames["Log"]) # Configure logging
 		
 		if Unit["Stage"] == 0:
+			
 			ANNOVAR(
 				InputVCF = FileNames["VCF"],
 				OutputTSV = FileNames["AnnovarTable"],
@@ -301,10 +428,21 @@ def AnnoPipe(
 				GenomeAssembly = PipelineConfig["GenomeAssembly"],
 				Logger = Logger,
 				Threads = PipelineConfig["Threads"])
+			
+			if PipelineConfig["GFF3"]:
+				CureBase(
+					InputVCF = FileNames["VCF"],
+					OutputTSV = FileNames["Gff3Table"],
+					Databases = PipelineConfig["GFF3"],
+					AnnovarFolder = PipelineConfig["AnnovarFolder"],
+					Reference = PipelineConfig["Reference"],
+					GenomeAssembly = PipelineConfig["GenomeAssembly"],
+					Logger = Logger,
+					Threads = PipelineConfig["Threads"])
 			Unit["Stage"] += 1
 			if BackupPossible: SaveJSON(Protocol, CurrentStage)
-			
-		if Unit["Stage"] == 1:
+		
+		if Unit["Stage"] == 2:
 			AnnoFit(
 				InputTSV = FileNames["AnnovarTable"],
 				OutputXLSX = FileNames["FilteredXLSX"],
