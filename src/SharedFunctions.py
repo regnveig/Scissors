@@ -8,6 +8,7 @@ import bz2
 import base64
 import datetime
 import functools
+import glob
 import gzip
 import io
 import json
@@ -19,6 +20,7 @@ import pysam
 import re
 import subprocess
 import sys
+import telegram
 import tempfile
 import time
 import warnings
@@ -45,6 +47,16 @@ def DefaultLogger(
 	
 	# Return
 	return Logger
+
+def SendToTelegram(
+		Message: str,
+		Logger: logging.Logger,
+		Token: str,
+		ChatID: str) -> None:
+	try:
+		telegram.Bot(Token).sendMessage(chat_id=ChatID, text=Message)
+	except Exception as e:
+		Logger.warning(f"Telegram Bot error: {e}")
 
 ## ------======| I/O |======------
 

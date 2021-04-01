@@ -165,6 +165,10 @@ def CureBase(
 		InformationCols = [item for item in Data.columns.to_list() if item not in SNPdata]
 		Data[InformationCols] = Data[InformationCols].parallel_applymap(lambda x: '.' if x != x else '; '.join([str(item) for item in sorted(list(set(x)))]))
 		Data = Data[SNPdata + ExpectedCols]
+		
+		# Merge Annovar & Gff3
+		AnnovarTable = pandas.read_csv(OutputTSV, sep='\t', dtype=str)
+		Data = pandas.merge(AnnovarTable, Data, how='left', on=['Chr', 'Start', 'End', 'Ref', 'Alt']).sort_values(by=['Chr', 'Start'])
 		Data.to_csv(OutputTSV, sep='\t', index=False)
 
 # ------======| ANNOFIT |======------
@@ -177,6 +181,7 @@ def AnnoFit(
 		AnnoFitConfigFile: str,
 		Logger: logging.Logger,
 		ChunkSize: int,
+		Filtering: str = "full",
 		Threads: int = cpu_count()) -> None:
 	
 	MODULE_NAME = "AnnoFit"
@@ -257,6 +262,12 @@ def AnnoFit(
 	def FormatExonPrediction(Series: pandas.Series) -> str:
 		Result = ''.join(Series.to_list())
 		return ('.' if (Result.count('D') + Result.count('T') == 0) else '/'.join([str(Result.count('D')), str(Result.count('D') + Result.count('T'))]))
+	def	FormatGIAB(Series: pandas.Series) -> str:
+		Result = sorted(list(set([str(key[5:]) for key, value in Series.to_dict().items() if value != '.'])))
+		return '.' if not Result else ';'.join(Result)
+	def	FormatNCBIProblems(Series: pandas.Series) -> str:
+		Result = sorted(list(set([str(key[5:-6]) for key, value in Series.to_dict().items() if key[-6:] == '.start' and value != '.'])), key=lambda x: Config["NCBI_Problems_Ranks"][x])
+		return '.' if not Result else Result[-1]
 	FormatdbSNP = lambda x: '.' if x == '.' else f"=HYPERLINK(\"https://www.ncbi.nlm.nih.gov/snp/{x}\", \"{x}\")"
 	FormatUCSC = lambda x: f"=HYPERLINK(\"https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position={x['Chr']}%3A{str(x['Start'])}%2D{str(x['End'])}\", \"{x['Chr']}:{str(x['Start'])}\")"
 	FormatGenomeBrowser = lambda x: '.' if x == '.' else f"=HYPERLINK(\"https://www.genecards.org/Search/Keyword?queryString={'%20OR%20'.join(['%5Baliases%5D(%20' + str(item) + '%20)' for item in x.split(';')])}&keywords={','.join([str(item) for item in x.split(';')])}\", \"{x}\")"
@@ -290,6 +301,13 @@ def AnnoFit(
 		ChunkTime = time.time()
 		StartTime = time.time()
 		
+		Data.fillna('.', inplace=True)
+		
+		# Problematic Regions
+		Data["GIAB_Problems"] = Data[Config["GIAB"]].parallel_apply(FormatGIAB, axis=1)
+		Data["NCBI_Problems"] = Data[Config["NCBI_Problems"]].parallel_apply(FormatNCBIProblems, axis=1)
+		Data = Data.rename(columns={"ENCODE_Blacklist.name": "ENCODE_Blacklist", 'UCSC_UnusualRegions.name': 'UCSC_UnusualRegions'})
+		
 		# Basic info format
 		Data.rename(columns=Config["OtherInfo"], inplace=True) # Rename OtherInfo
 		Data[["Start", "End"]] = Data[["Start", "End"]].parallel_applymap(FormatCoordinates) # Prepare coords
@@ -303,6 +321,7 @@ def AnnoFit(
 		VCF_Metadata = pandas.DataFrame(Data[["VCF.FORMAT", "VCF.SAMPLE"]].parallel_apply(FormatVcfMetadata, axis=1).to_list()).set_index("Name").rename_axis(None, axis=1)
 		Data.drop(columns=["VCF.FORMAT", "VCF.SAMPLE"], inplace=True)
 		Data = pandas.concat([Data, VCF_Metadata], axis=1, sort=False)
+		Data.fillna('.', inplace=True)
 		del VCF_Metadata
 		Data["VCF.GT"] = Data["VCF.GT"].parallel_apply(FormatGenotype) # Prepare Genotype
 		
@@ -327,32 +346,34 @@ def AnnoFit(
 		StartTime = time.time()
 		Data = pandas.merge(Data, HGMDTable, how='left', left_on=["Chr", "Start", "End"], right_on=["Chromosome/scaffold name", "Chromosome/scaffold position start (bp)", "Chromosome/scaffold position end (bp)"])
 		Data.rename(columns={"Variant name": "HGMD"}, inplace=True)
-		Data["HGMD"].fillna('.', inplace=True)
+		Data.fillna('.', inplace=True)
 		Logger.info(f"HGMD merged - %s" % (SecToTime(time.time() - StartTime)))
 		
 		# Merge with XRef
 		StartTime = time.time()
 		XRef = Data["AnnoFit.GeneName"].parallel_apply(lambda x: SqueezeTable(XRefTable.loc[[item for item in x.split(';') if item in XRefTable.index],:]))
 		Data = pandas.concat([Data, XRef], axis=1, sort=False)
+		Data.fillna('.', inplace=True)
 		del XRef
 		Logger.info(f"XRef merged - %s" % (SecToTime(time.time() - StartTime)))
 		
-		# Base Filtering
-		StartTime = time.time()
-		Filters = {}
-		Filters["DP"] = Data["VCF.AD"].parallel_apply(FilterDepth)
-		Filters["OMIM"] = Data["Disease_description"].parallel_apply(lambda x: x != '.')
-		Filters["HGMD"] = Data['HGMD'].parallel_apply(lambda x: x != '.')
-		Filters["PopMax"] = Data["AnnoFit.PopFreqMax"] < Config["PopMax_filter"]
-		Filters["ExonPred"] = Data["AnnoFit.ExonPred"].parallel_apply(FilterExonPrediction)
-		Filters["SplicePred"] = Data["AnnoFit.SplicePred"].parallel_apply(lambda x: x in Config["SplicePred_filter"])
-		Filters["IntronPred"] = Data["regsnp_disease"].parallel_apply(lambda x: x in Config["IntronPred_filter"])
-		Filters["Significance"] = Data["InterVar_automated"].parallel_apply(lambda x: x in Config["InterVar_filter"])
-		Filters["CLINVAR"] = Data["CLNSIG"].parallel_apply(lambda x: any([item in Config["CLINVAR_filter"] for item in str(x).split(',')]))
-		Filters["ExonicFunc"] = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
-		Filters["ncRNA"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
-		Filters["Splicing"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
-		#Data = Data[Filters["DP"]] # & PopMax_filter & (ExonPred_filter | SplicePred_filter | IntronPred_filter | Significance_filter | CLINVAR_filter | ExonicFunc_filter | Splicing_filter | (ncRNA_filter & OMIM_filter))]
+		if Filtering == "full":
+			# Base Filtering
+			StartTime = time.time()
+			Filters = {}
+			Filters["DP"] = Data["VCF.AD"].parallel_apply(FilterDepth)
+			Filters["OMIM"] = Data["Disease_description"].parallel_apply(lambda x: x != '.')
+			Filters["HGMD"] = Data['HGMD'].parallel_apply(lambda x: x != '.')
+			Filters["PopMax"] = Data["AnnoFit.PopFreqMax"] < Config["PopMax_filter"]
+			Filters["ExonPred"] = Data["AnnoFit.ExonPred"].parallel_apply(FilterExonPrediction)
+			Filters["SplicePred"] = Data["AnnoFit.SplicePred"].parallel_apply(lambda x: x in Config["SplicePred_filter"])
+			Filters["IntronPred"] = Data["regsnp_disease"].parallel_apply(lambda x: x in Config["IntronPred_filter"])
+			Filters["Significance"] = Data["InterVar_automated"].parallel_apply(lambda x: x in Config["InterVar_filter"])
+			Filters["CLINVAR"] = Data["CLNSIG"].parallel_apply(lambda x: any([item in Config["CLINVAR_filter"] for item in str(x).split(',')]))
+			Filters["ExonicFunc"] = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
+			Filters["ncRNA"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
+			Filters["Splicing"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
+			Data = Data[Filters["DP"] & Filters["PopMax"] & ( Filters["HGMD"] & Filters["ExonPred"] | Filters["SplicePred"] | Filters["IntronPred"] | Filters["Significance"] | Filters["CLINVAR"] | Filters["ExonicFunc"] | Filters["Splicing"] | (Filters["ncRNA"] & Filters["OMIM"]))]
 		Logger.info(f"Base filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 		
 		#Concat chunks
@@ -360,45 +381,56 @@ def AnnoFit(
 		Logger.info(f"Chunk #{str(ChunkNum + 1)} - %s" % (SecToTime(time.time() - ChunkTime)))
 	
 	# Compound
-	Result['Annofit.Compound'] = Result['AnnoFit.GeneName'].parallel_apply(lambda x: ';'.join([str(Result['AnnoFit.GeneName'].apply(lambda y: gene in y.split(';')).value_counts()[True]) for gene in x.split(';')]))
+	if Filtering == "full":
+		Result['Annofit.Compound'] = Result['AnnoFit.GeneName'].parallel_apply(lambda x: ';'.join([str(Result['AnnoFit.GeneName'].apply(lambda y: gene in y.split(';')).value_counts()[True]) for gene in x.split(';')]))
+	else: Result['Annofit.Compound'] = "."
 	
-	# Dominance Filtering
-	StartTime = time.time()
-	Filters["pLi"] = Result["pLi"].parallel_apply(FilterpLi)
-	Filters["OMIM_Dominance"] = Result["Disease_description"].parallel_apply(FilterOmimDominance)
-	Filters["Zygocity"] = Result["VCF.GT"].parallel_apply(lambda x: x == 'HOMO')
-	Filters["NoInfo"] = Result[["pLi", "Disease_description"]].parallel_apply(FilterNoInfo, axis=1)
-	Filters["Compound_filter"] = Result['Annofit.Compound'].parallel_apply(lambda x: any([int(item) > 1 for item in x.split(';')]))
-	#Result = Result[Compound_filter | pLi_filter | OMIM_Dominance_filter | Zygocity_filter | NoInfo_filter]
+	if Filtering == "full":
+		# Dominance Filtering
+		StartTime = time.time()
+		Filters = {}
+		Filters["pLi"] = Result["pLi"].parallel_apply(FilterpLi)
+		Filters["OMIM_Dominance"] = Result["Disease_description"].parallel_apply(FilterOmimDominance)
+		Filters["Zygocity"] = Result["VCF.GT"].parallel_apply(lambda x: x == 'HOMO')
+		Filters["NoInfo"] = Result[["pLi", "Disease_description"]].parallel_apply(FilterNoInfo, axis=1)
+		Filters["Compound_filter"] = Result['Annofit.Compound'].parallel_apply(lambda x: any([int(item) > 1 for item in x.split(';')]))
+		Result = Result[ Filters["Compound_filter"] | Filters["pLi"] | Filters["OMIM_Dominance"] | Filters["Zygocity"] | Filters["NoInfo"] ]
+		Logger.info(f"Filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
+		
 	Result = Result.sort_values(by=["Chr", "Start", "End"])
-	Logger.info(f"Filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
+	Result["UCSC"] = "."
 	
-	# Make genes list
-	StartTime = time.time()
-	Genes = [item.split(';') for item in Result["AnnoFit.GeneName"].to_list()]
-	Genes = list(set([item for sublist in Genes for item in sublist]))
-	GenesTable = XRefTable.loc[[item for item in Genes if item in XRefTable.index],:].reset_index().rename(columns={"index": "#Gene_name"}).sort_values(by=["#Gene_name"])[Config["ShortGenesTable"]]
-	# TODO NoInfo Genes?
-	del XRefTable
-	Logger.info(f"Genes list is ready - %s" % (SecToTime(time.time() - StartTime)))
-	
-	# Hyperlinks
-	StartTime = time.time()
-	Result["avsnp150"] = Result["avsnp150"].parallel_apply(FormatdbSNP)
-	Result["UCSC"] = Result[["Chr", "Start", "End"]].parallel_apply(FormatUCSC, axis=1)
-	Result["AnnoFit.GeneName"] = Result["AnnoFit.GeneName"].apply(FormatGenomeBrowser)
-	OMIM_links = pandas.DataFrame(GenesTable[["pLi", "Disease_description"]].parallel_apply(FormatOmimCodes, axis=1).to_list()).set_index("Name").fillna('.').rename_axis(None, axis=1)
-	GenesTable = pandas.concat([GenesTable, OMIM_links], axis=1, sort=False)
-	Logger.info(f"Hyperlinks are ready - %s" % (SecToTime(time.time() - StartTime)))
+	if Filtering == "full":
+		# Make genes list
+		StartTime = time.time()
+		Genes = [item.split(';') for item in Result["AnnoFit.GeneName"].to_list()]
+		Genes = list(set([item for sublist in Genes for item in sublist]))
+		GenesTable = XRefTable.loc[[item for item in Genes if item in XRefTable.index],:].reset_index().rename(columns={"index": "#Gene_name"}).sort_values(by=["#Gene_name"])[Config["ShortGenesTable"]]
+		# TODO NoInfo Genes?
+		del XRefTable
+		Logger.info(f"Genes list is ready - %s" % (SecToTime(time.time() - StartTime)))
+		
+		# Hyperlinks
+		StartTime = time.time()
+		Result["avsnp150"] = Result["avsnp150"].parallel_apply(FormatdbSNP)
+		Result["UCSC"] = Result[["Chr", "Start", "End"]].parallel_apply(FormatUCSC, axis=1)
+		Result["AnnoFit.GeneName"] = Result["AnnoFit.GeneName"].apply(FormatGenomeBrowser)
+		OMIM_links = pandas.DataFrame(GenesTable[["pLi", "Disease_description"]].parallel_apply(FormatOmimCodes, axis=1).to_list()).set_index("Name").fillna('.').rename_axis(None, axis=1)
+		GenesTable = pandas.concat([GenesTable, OMIM_links], axis=1, sort=False)
+		Logger.info(f"Hyperlinks are ready - %s" % (SecToTime(time.time() - StartTime)))
 	
 	# Save result
 	StartTime = time.time()
 	Result = Result[Config["FinalVariant"]]
 	Result.insert(0, 'Comment', '')
-	with pandas.ExcelWriter(OutputXLSX) as Writer:
-		Result.to_excel(Writer, "Variants", index=False)
-		GenesTable.to_excel(Writer, "Genes", index=False)
-		Writer.save()
+	if Filtering == "full":
+		with pandas.ExcelWriter(OutputXLSX) as Writer:
+			Result.to_excel(Writer, "Variants", index=False)
+			GenesTable.to_excel(Writer, "Genes", index=False)
+			Writer.save()
+	else:
+		Result.to_csv(OutputXLSX, sep='\t', index=False)
+	
 	Logger.info(f"Files saved - %s" % (SecToTime(time.time() - StartTime)))
 	Logger.info(f"{MODULE_NAME} finish - %s" % (SecToTime(time.time() - GlobalTime)))
 
@@ -432,7 +464,7 @@ def AnnoPipe(
 			if PipelineConfig["GFF3"]:
 				CureBase(
 					InputVCF = FileNames["VCF"],
-					OutputTSV = FileNames["Gff3Table"],
+					OutputTSV = FileNames["AnnovarTable"],
 					Databases = PipelineConfig["GFF3"],
 					AnnovarFolder = PipelineConfig["AnnovarFolder"],
 					Reference = PipelineConfig["Reference"],

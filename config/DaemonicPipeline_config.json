@@ -172,16 +172,6 @@
 			"Database": "gwava"
 		}
 	],
-	"GFF31": [
-		{
-			"Name": "ENCODE_Blacklist",
-			"FileName": "db/Problematic_Regions/ENCODE_Blacklist",
-			"ChromColumn": "#chrom",
-			"StartColumn": "chromStart",
-			"EndColumn": "chromEnd",
-			"Comment": "Low mappability or high signal regions (doi: 10.1038/s41598-019-45839-z)"
-		}
-	],
 	"GFF3": [
 		{
 			"Name": "ENCODE_Blacklist",
@@ -197,7 +187,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "Calls with evidence of local alignment problems like clipped reads"
 		},
 		{
 			"Name": "GIAB_AlleleImbalance",
@@ -205,7 +195,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "Abnormal allele balance"
 		},
 		{
 			"Name": "GIAB_CallConflict",
@@ -213,7 +203,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "HaplotypeCaller makes no call and UnifiedGenotyper makes a variant call"
 		},
 		{
 			"Name": "GIAB_FilterSSE",
@@ -221,7 +211,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "Sites with systematic sequencing errors (SSEs)"
 		},
 		{
 			"Name": "GIAB_GenotypeConflict",
@@ -229,7 +219,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "Calls with unresolved conflicting genotypes after arbitration"
 		},
 		{
 			"Name": "GIAB_QualityIssue",
@@ -237,7 +227,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": ""
+			"Comment": "Regions with low coverage or mapping quality"
 		},
 		{
 			"Name": "NCBI_NGS_DeadZone",
@@ -245,7 +235,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": "Intervals that cannot be reliably analyzed by standard next-generation sequencing (NGS)"
+			"Comment": "These regions are entire exons or large contiguous portions of exons that have 100% identity to other loci. A contiguous region of 250 or more affected positions indicates a stretch of 100% homology that extends 499 or more base pairs. When attempting to sequence the central positions of a homologous sequence of this length, a read’s mate pair cannot assist with unambiguous alignment of the read because it also falls inside the region of 100% homology, given a library fragment size of 250 bp."
 		},
 		{
 			"Name": "NCBI_NGS_HighStringency",
@@ -253,7 +243,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": "During nucleic acid hybridization or reassociation, stringency is the strictness with which the Watson-Crick base-pairing is required under specified conditions of temperature, pH, salt concentration, etc. Conditions of high stringency require all bases of one polynucleotide to be paired with complementary bases on the other"
+			"Comment": "Exon-based list included exons with ≥90% of their positions affected by high homology or a contiguous stretch of 250 or more affected positions to account for significant regions of high homology within large exons. In these cases, the overwhelming majority of reads generated from this region will possess high homology to other loci, which may lead to misalignment to other portions of the genome. Variant calls based on reads mapped to these affected regions should be viewed with extreme caution."
 		},
 		{
 			"Name": "NCBI_NGS_LowStringency",
@@ -261,7 +251,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": "During nucleic acid hybridization or reassociation, stringency is the strictness with which the Watson-Crick base-pairing is required under specified conditions of temperature, pH, salt concentration, etc. Conditions of low stringency allow some bases of one polynucleotide to be unpaired with complementary bases on the other"
+			"Comment": "This list captures any exon with at least one position whose associated 250-bp sequence fragment maps to more than one place in the genome with 2% or less mismatches. This analysis aims to detect all regions at risk for homology interference, and thus a substantial fraction of exons on this list may not cause analytical problems in practice."
 		},
 		{
 			"Name": "NCBI_Sanger_DeadZone",
@@ -269,7 +259,7 @@
 			"ChromColumn": "#chrom",
 			"StartColumn": "chromStart",
 			"EndColumn": "chromEnd",
-			"Comment": "Intervals that cannot be reliably analyzed by Sanger sequencing"
+			"Comment": "Some clinical laboratories routinely use Sanger sequencing to confirm variants detected by NGS. A homologous region that is difficult to analyze by NGS may still be interrogated accurately by Sanger sequencing provided that it is possible to design amplicons larger than the region affected by sequence homology. There are regions in the exome that cannot be Sanger sequenced using standard short amplicon protocols, assuming a maximum amplicon size of 1,000 bp."
 		},
 		{
 			"Name": "UCSC_UnusualRegions",
