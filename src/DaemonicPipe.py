@@ -69,7 +69,7 @@ def FastQC(
 			Name = f"{MODULE_NAME}.Analysis",
 			Command = f"fastqc -o \"{TempDir}\" -t {str(Threads)} \"{AnalyzeFilename}\"",
 			Logger = Logger)
-		HTMLTemp = glob(os.path.join(TempDir, "*.html"))
+		HTMLTemp = glob.glob(os.path.join(TempDir, "*.html"))
 		if len(HTMLTemp) != 1:
 			ErrorMessage = f"Error processing file '{InputFastQ}'"
 			Logger.error(ErrorMessage)
@@ -457,7 +457,8 @@ def ComposeRGTag(
 		"ILLUMINA;NCBI_1;Sample": "^@(?P<Sample>[^\\.]+).* (?P<Instrument>[\\w-]+):(?P<Run>\\d+):(?P<FlowCellID>[\\w-]+):(?P<Lane>\\d+):(?P<Tile>\\d+):(?P<Xpos>\\d+):(?P<Ypos>\\d+) length=\\d+$",
 		"ILLUMINA;NCBI_2;Sample": "^@(?P<Sample>[^\\.]+).* (?P<Instrument>[\\w-]+):(?P<Lane>\\d+):(?P<Tile>\\d+):(?P<Xpos>\\d+):(?P<Ypos>\\d+) length=\\d+$",
 		"ILLUMINA;NCBI_21;Sample": "^@(?P<Sample>[^\\.]+).* (?P<Instrument>[\\w-]+)\\.s_(?P<Samp>\\d+):(?P<Lane>\\d+):(?P<Tile>\\d+):(?P<Xpos>\\d+):(?P<Ypos>\\d+) length=\\d+$",
-		"ILLUMINA;NCBI_ihk;Sample": "^@(?P<Sample>[^\\.]+).* SL(?P<Lane>\\d+)_R(?P<Run>\\d+)_(?P<Instrument>[\\w-]+)_.* length=\\d+$"
+		"ILLUMINA;NCBI_ihk;Sample": "^@(?P<Sample>[^\\.]+).* SL(?P<Lane>\\d+)_R(?P<Run>\\d+)_(?P<Instrument>[\\w-]+)_.* length=\\d+$",
+		"ILLUMINA;Strange2;Barcode": "^@V(?P<Instrument>\\d+)L(?P<Lane>\\d+)C(?P<Tile>\\d+)R(?P<Coords>\\d+):0:0:0:0 (?P<Read>[1|2]):(?P<Filtered>[Y|N]):(?P<ControlNumber>\\d*[02468]):(?P<Barcode>[ATGCN\\+]+)$",
 		}
 	ReadName = OpenAnyway(FileName=FileName, Mode='r', Logger=Logger).readline().decode('utf-8')[:-1]
 		
@@ -481,7 +482,7 @@ def ComposeRGTag(
 	if PL == "ILLUMINA":
 		if Format[1] == "New": ID = f"FC{Fields['FlowCellID']}.L{Fields['Lane']}"
 		if Format[1] == "Old": ID = f"FC{Fields['Instrument']}.L{Fields['Lane']}"
-		if Format[1] == "Strange1": ID = f"FC{Fields['Instrument']}.L{Fields['Lane']}"
+		if (Format[1] == "Strange1") or (Format[1] == "Strange2"): ID = f"FC{Fields['Instrument']}.L{Fields['Lane']}"
 		if Format[1] == "NCBI_1": ID = f"FC{Fields['FlowCellID']}.L{Fields['Lane']}"
 		if Format[1] == "NCBI_2": ID = f"FC{Fields['Instrument']}.L{Fields['Lane']}"
 		if Format[1] == "NCBI_21": ID = f"FC{Fields['Instrument']}.L{Fields['Lane']}"

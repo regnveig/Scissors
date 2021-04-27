@@ -1,0 +1,190 @@
+#!/bin/python3
+
+from copy import deepcopy
+from PIL import Image
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import functools
+import getpass
+import io
+import numpy as np
+import os
+import pandas
+import sys
+import time
+
+class HgmdCrawler:
+	
+	# INIT
+	
+	def __init__(self, FirefoxExecutablePath, Headless=True):
+		if Headless: os.environ['MOZ_HEADLESS'] = '1'
+		self.__WebDriver = webdriver.Firefox(executable_path = FirefoxExecutablePath)
+		self.__Paths = {
+			"Login": "http://www.hgmd.cf.ac.uk/docs/login.html",
+			"Search": "http://www.hgmd.cf.ac.uk/ac/all.php",
+			"CacheMemory": "about:cache?storage=memory"
+			}
+		self.__Databases = {
+			"M": "Missense/nonsense",
+			"S": "Splice",
+			"R": "Regulatory",
+			"D": "Small deletions",
+			"I": "Small insertions",
+			"X": "Small indels",
+			"G": "Gross deletions",
+			"N": "Gross insertions",
+			"P": "Complex rearrangements",
+			"0": "Repeat variations" # TODO
+			}
+		self.__Timeout = 300
+		self.__CrowledTag = "|<CROWLED>|"
+		self.__LoggedIn = False
+		self.__SearchPage = False
+	
+	# PRIVATE
+	
+	def __ElementExists(self, Parent, XPath):
+		try:
+			Parent.find_element_by_xpath(XPath)
+			return True
+		except:
+			return False
+	
+	def __FindElement(self, WebElement, XPath):
+		Timeout = deepcopy(self.__Timeout)
+		while Timeout > 0:
+			HTML = self.__WebDriver.find_element_by_tag_name('html')
+			HTML.send_keys(Keys.END)
+			try:
+				return WebElement.find_element_by_xpath(XPath)
+			except:
+				time.sleep(1)
+				Timeout -= 1
+		raise RuntimeError(f"Page loading timeout (default: {self.__Timeout} sec)")
+	
+	def PostSearchData(self, GeneName, DatabaseCode):
+		if not self.__LoggedIn: raise RuntimeError(f"The crawler not logged in")
+		self.__WebDriver.get(self.__Paths["Search"])
+		DatabaseName = self.__Databases[DatabaseCode]
+		GeneElement = self.__FindElement(self.__WebDriver, "//input[@name='gene']")
+		(GeneElement.clear(), GeneElement.send_keys(GeneName))
+		DatabaseElement = webdriver.support.ui.Select(self.__FindElement(self.__WebDriver, "//select[@name='database']"))
+		DatabaseElement.select_by_visible_text(DatabaseName)
+		GeneElement.submit()
+		self.__FindElement(self.__WebDriver, "//h3") # Check redirect
+		self.__FindElement(self.__WebDriver, "//hr") # Check complete loading
+		self.__SearchPage = True
+	
+	def __GetCachedImage(self, Path):
+		
+		return 
+	
+	def GetGeneTable(self):
+		
+		if not self.__LoggedIn: raise RuntimeError(f"The crawler not logged in")
+		if not self.__SearchPage: raise RuntimeError(f"Current page is not search page")
+		
+		def CrawlPic(URI, CacheNames):
+			self.__WebDriver.get(CacheNames[URI[0]])
+			Data = self.__FindElement(self.__WebDriver, "//pre").text
+			Data = ''.join([''.join(line.split('  ')[1:17]) for line in Data.split('\n')])
+			Data = np.array(Image.open(io.BytesIO(bytes.fromhex(Data))))
+			Data = '+'.join([''.join(['0' if item1[3] == 0 else '1' for item1 in item]) for item in Data.tolist()])
+			return f"{Data}{self.__CrowledTag}{str(URI[1])}"
+		
+		CrawlPicPath = lambda x: (self.__FindElement(x, ".//img").get_attribute("src"), x.text)
+		
+		def Apply2Column(Tab, ColName, Func):
+			if ColName in Tab.columns: Tab[ColName] = Tab[ColName].apply(Func)
+		
+		Columns = {
+			"Accession Number": lambda x: x.text,
+			"Phenotype": lambda x: x.text,
+			"Codon number": lambda x: x.text,
+			"Description": lambda x: x.text,
+			"Nucleotide": lambda x: x.text,
+			"Comments": lambda x: x.text if not self.__ElementExists(x, ".//img") else x.find_element_by_xpath(".//img").get_attribute("alt"),
+			"Reference": lambda x: x.find_elements_by_xpath(".//a")[0].get_attribute("href"),
+			"Codon change": CrawlPicPath,
+			"Amino acid change": CrawlPicPath,
+			"HGMD Splicing mutation": CrawlPicPath,
+			"Sequence": CrawlPicPath,
+			"Deletion\n(^codon number)": CrawlPicPath,
+			"Insertion": lambda x: x.text,
+			"Insertion\n(^codon number)": CrawlPicPath,
+			"Genomic coordinates &\nHGVS nomenclature": lambda x: '.'
+			}
+		
+		CrawlPicCols = [key for key, value in Columns.items() if value == CrawlPicPath]
+		
+		Table = self.__WebDriver.find_elements_by_xpath("//table[@class='gene']")[1]
+		Table = [line.find_elements_by_xpath(".//td|.//th") for line in Table.find_elements_by_xpath(".//tr")]
+		Table = pandas.DataFrame(Table)
+		
+		Table.columns = Table.loc[0,:].apply(lambda x: x.text)
+		Table = Table.drop(index=[0])
+		
+		for Col, Func in Columns.items(): Apply2Column(Table, Col, Func)
+		
+		self.__WebDriver.get(self.__Paths["CacheMemory"])
+		CacheNames = {item.text: item.get_attribute("href") for item in self.__WebDriver.find_elements_by_xpath("//a")}
+		for PicCol in CrawlPicCols: Apply2Column(Table, PicCol, lambda x: CrawlPic(x, CacheNames))
+		Table = Table.set_index("Accession Number")
+		self.__SearchPage = False
+		return Table
+	
+	# PUBLIC
+	
+	def __ConsoleLogin(self):
+		print(f"# Please log in to HGMD to continue.", end='\n', file=sys.stdout)
+		Email, Password = input(f"Email: "), input(f"Password: ")
+		self.Login(Email, Password)
+	
+	def Login(self, Email, Password):
+		self.__WebDriver.get(self.__Paths["Login"])
+		EmailElement = self.__FindElement(self.__WebDriver,"//input[@name='email']")
+		PasswordElement = self.__FindElement(self.__WebDriver, "//input[@name='password']")
+		(EmailElement.clear(), EmailElement.send_keys(Email))
+		(PasswordElement.clear(), PasswordElement.send_keys(Password))
+		PasswordElement.submit()
+		Response = self.__FindElement(self.__WebDriver, "//td[@height='35']").text
+		if "Login successful." in Response: self.__LoggedIn = True
+		else: 
+			self.__LoggedIn = False
+			raise RuntimeError(f"HGMD login failed: '{Response}'")
+	
+	def GetAccession(self, GeneName, AccessionNumber, Interactive=False):
+		CachedName = f"darktools_cache/{GeneName}_{AccessionNumber[1]}.cache.tsv"
+		if not os.path.exists(CachedName):
+			if Interactive and not self.__LoggedIn: self.__ConsoleLogin()
+			self.PostSearchData(GeneName, AccessionNumber[1])
+			Table = self.GetGeneTable()
+			Table.to_csv(f"darktools_cache/{GeneName}_{AccessionNumber[1]}.cache.tsv", sep='\t')
+		else: Table = pandas.read_csv(CachedName, sep='\t', dtype=str).set_index("Accession Number")
+		SAVE_REPORT = f"# HGMD: {AccessionNumber}\n" + '\n'.join([str(
+			f"**{key}:** {value}\n" if (self.__CrowledTag not in value) else 
+			(f"**{key}:**\n<pre>\n" + value.split(self.__CrowledTag)[0].replace('0', ' ').replace('1', '█').replace('+', '\n') + f"\n{value.split(self.__CrowledTag)[1]}\n</pre>\n")
+			) for key, value in Table.loc[AccessionNumber,:].to_dict().items()])
+		PRINT_REPORT = f"# HGMD: {AccessionNumber}\n" + '\n'.join([str(
+			f"{key}: {value}\n" if (self.__CrowledTag not in value) else 
+			(f"{key}:\n" + value.split(self.__CrowledTag)[0].replace('0', ' ').replace('1', '█').replace('+', '\n') + f"\n{value.split(self.__CrowledTag)[1]}\n")
+			) for key, value in Table.loc[AccessionNumber,:].to_dict().items()])
+		if Interactive: print(PRINT_REPORT, end='\n', file=sys.stdout)
+		with open(f"{GeneName}_{AccessionNumber}.md", 'wt') as f: f.write(SAVE_REPORT)
+		return Table.loc[AccessionNumber,:].to_dict()
+
+if __name__ == '__main__':
+	
+	Tag = f"# Enter accession code and HGNC gene name in format ACCESSION|GENE"
+	print(f"# DarkTools: HGMD Crawler [alpha]\n{Tag}", end='\n', file=sys.stdout)
+	Crawler = HgmdCrawler("darktools_exec/geckodriver", Headless=False)
+	for query in sys.stdin:
+		try:
+			AccessionNumber, GeneName = query.split('|')
+			Crawler.GetAccession(GeneName, AccessionNumber, Interactive=True)
+		except Exception as e:
+			print(f"# ERROR: ({e})", end='\n', file=sys.stdout)
+		print(Tag, end='\n', file=sys.stdout)
+		
+	print(f"Bye!", end='\n', file=sys.stdout)

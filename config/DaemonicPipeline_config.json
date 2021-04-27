@@ -1,12 +1,10 @@
 {
-	"GenomeAssembly": "hg19", 
+	"GenomeAssembly": "hg19",
 	"Reference": "/dev/datasets/FairWind/_db/hg19_canonic/hg19.fa",
 	"Capture1": "/dev/datasets/FairWind/_db/hg19_canonic/MedExome_hg19_canonic.bed",
-	"Capture1": "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed",
-	
+	"Capture": "/dev/datasets/FairWind/_db/hg19_canonic/KAPA_HyperExome_hg19_capture.bed",
 	"FastQSampleSize": 1000000,
 	"Threads": 10,
-	
 	"Adapters": {
 		"illumina": {
 			"Name": "illumina",
@@ -14,15 +12,12 @@
 			"R2": "AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT"
 		}
 	},
-	
 	"GATKCondaEnv": "/dev/datasets/FairWind/_tools/gatk_conda/bin/activate gatk",
 	"GATK_ConfigFile": "config/GATK_config.txt",
 	"dbSNP": "/dev/datasets/FairWind/_db/dbsnp/dbsnp151_filtered.vcf.gz",
-	
 	"AnnoFitConfig": "config/AnnoFit_config.json",
 	"AnnofitChunkSize": 300000,
 	"HGMDPath": "db/HGMD.tsv",
-	
 	"AnnovarXRefPath": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/example/gene_fullxref.txt",
 	"AnnovarFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar",
 	"AnnovarDBFolder": "/dev/datasets/FairWind/_tools/ANNOVAR_200706/annovar/humandb",
@@ -102,7 +97,7 @@
 		{
 			"Protocol": "AFR.sites.2015_08",
 			"Operation": "f",
-			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)", 
+			"Comment": "The 1000G team fixed a bug in chrX frequency calculation. Based on 201508 collection v5b (based on 201305 alignment)",
 			"Database": "1000g2015aug"
 		},
 		{
@@ -138,7 +133,7 @@
 		{
 			"Protocol": "esp6500siv2_all",
 			"Operation": "f",
-			"Comment": "alternative allele frequency in All subjects in the NHLBI-ESP project with 6500 exomes, including the indel calls and the chrY calls. This is lifted over from hg19 by myself.", 
+			"Comment": "alternative allele frequency in All subjects in the NHLBI-ESP project with 6500 exomes, including the indel calls and the chrY calls. This is lifted over from hg19 by myself.",
 			"Database": "esp6500siv2_all"
 		},
 		{

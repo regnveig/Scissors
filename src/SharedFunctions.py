@@ -14,12 +14,14 @@ import io
 import json
 import logging
 import math
+import numpy
 import os
 import pandas
 import pysam
 import re
 import subprocess
 import sys
+import tabix
 import tempfile
 import time
 import warnings
@@ -132,17 +134,23 @@ def SimpleSubprocess(
 	Logger.debug(Command)
 	
 	# Shell
-	Shell = subprocess.Popen(Command, shell=True, executable="/bin/bash", stdout=open(os.devnull, 'w'), stderr=subprocess.PIPE)
-	Error = Shell.communicate()[1]
+	Shell = subprocess.Popen(Command, shell=True, executable="/bin/bash", stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	Stdout, Stderr = Shell.communicate()
 	if Shell.returncode != 0 and Shell.returncode not in AllowedCodes:
-		ErrorMessage1 = f"Command '{Name}' has returned non-zero exit code [{str(Shell.returncode)}]."
-		ErrorMessage2 = '\n\n' + Error.decode('utf-8') + '\n'
-		for line in [ErrorMessage1, Command, ErrorMessage2]: Logger.error(line)
-		raise OSError(f"{ErrorMessage1}{ErrorMessage2}")
-	if Shell.returncode in AllowedCodes: Logger.warning(f"Command '{Name}' has returned ALLOWED non-zero exit code [{str(Shell.returncode)}].")
+		ErrorMessages = [
+			f"Command '{Name}' has returned non-zero exit code [{str(Shell.returncode)}]",
+			f"Command: {Command}",
+			f"Details: {Stderr.decode('utf-8')}"
+			]
+		for line in ErrorMessages: Logger.error(line)
+		raise OSError(f"{ErrorMessages[0]}\n{ErrorMessage[2]}")
+	if Shell.returncode in AllowedCodes: Logger.warning(f"Command '{Name}' has returned ALLOWED non-zero exit code [{str(Shell.returncode)}]")
 	
 	# Timestamp
 	Logger.info(f"{Name} - %s" % (SecToTime(time.time() - StartTime)))
+	
+	# Return
+	return Stdout[:-1]
 
 ## ------======| MISC |======------
 

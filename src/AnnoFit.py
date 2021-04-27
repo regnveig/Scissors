@@ -373,7 +373,9 @@ def AnnoFit(
 			Filters["ExonicFunc"] = Data["AnnoFit.ExonicFunc"].parallel_apply(lambda x: any([item in Config["ExonicFunc_filter"] for item in str(x).split(';')]))
 			Filters["ncRNA"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["ncRNA_filter"] for item in str(x).split(';')]))
 			Filters["Splicing"] = Data["AnnoFit.Func"].parallel_apply(lambda x: any([item in Config["Splicing_filter"] for item in str(x).split(';')]))
-			Data = Data[Filters["DP"] & Filters["PopMax"] & ( Filters["HGMD"] & Filters["ExonPred"] | Filters["SplicePred"] | Filters["IntronPred"] | Filters["Significance"] | Filters["CLINVAR"] | Filters["ExonicFunc"] | Filters["Splicing"] | (Filters["ncRNA"] & Filters["OMIM"]))]
+			Filters["Problematic"] = Data[list(Config["Problems"].keys())].parallel_apply(lambda x: all([(x[index] not in item) for index, item in Config["Problems"].items()]), axis=1)
+			
+			Data = Data[Filters["DP"] & Filters["PopMax"] & Filters["Problematic"] & ( Filters["HGMD"] & Filters["ExonPred"] | Filters["SplicePred"] | Filters["IntronPred"] | Filters["Significance"] | Filters["CLINVAR"] | Filters["ExonicFunc"] | Filters["Splicing"] | (Filters["ncRNA"] & Filters["OMIM"]))]
 		Logger.info(f"Base filtering is ready - %s" % (SecToTime(time.time() - StartTime)))
 		
 		#Concat chunks
