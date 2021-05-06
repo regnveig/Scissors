@@ -9,4 +9,52 @@ PipelineConfig = json.load(open("config/DaemonicPipeline_config.json", 'rt'))
 Logger = DefaultLogger("/dev/null")
 
 if __name__ == "__main__":
-	pass
+	files = ["/dev/datasets/ngs_data/20210428_Dinara_IonXpress/IonXpress_006_R_2020_12_18_17_39_25_user_GSS5PL-0185-12-sgh3_Auto_user_GSS5PL-0185-12-sgh3_199.bam.vcf", "/dev/datasets/ngs_data/20210428_Dinara_IonXpress/IonXpress_008_R_2020_12_18_15_01_01_user_GSS5PL-0185-11-sgh4_Auto_user_GSS5PL-0185-11-sgh4_200.bam.vcf"]
+	for f in files:
+		#HaplotypeCalling(
+				#InputBAM = f,
+				#OutputVCF = f + ".vcf",
+				#Reference = "/dev/datasets/FairWind/_db/IonXpress_hg19/hg19.fasta",
+				#Logger = Logger,
+				#Env = PipelineConfig["GATKCondaEnv"],
+				#Threads = PipelineConfig["Threads"])
+		ANNOVAR(
+			InputVCF = f,
+			OutputTSV = f + ".anno.tsv",
+			Databases = PipelineConfig["AnnovarDatabases"],
+			DBFolder = PipelineConfig["AnnovarDBFolder"],
+			AnnovarFolder = PipelineConfig["AnnovarFolder"],
+			GenomeAssembly = PipelineConfig["GenomeAssembly"],
+			Logger = Logger,
+			Threads = PipelineConfig["Threads"])
+			
+		if PipelineConfig["GFF3"]:
+			CureBase(
+				InputVCF = f,
+				OutputTSV = f + ".anno.tsv",
+				Databases = PipelineConfig["GFF3"],
+				AnnovarFolder = PipelineConfig["AnnovarFolder"],
+				Reference = PipelineConfig["Reference"],
+				GenomeAssembly = PipelineConfig["GenomeAssembly"],
+				Logger = Logger,
+				Threads = PipelineConfig["Threads"])
+		
+		AnnoFit(
+			InputTSV = f + ".anno.tsv",
+			OutputXLSX = f + ".ALL.csv",
+			HGMD = PipelineConfig["HGMDPath"],
+			AnnovarFolder = PipelineConfig["AnnovarFolder"],
+			AnnoFitConfigFile = PipelineConfig["AnnoFitConfig"],
+			Logger = Logger,
+			ChunkSize = PipelineConfig["AnnofitChunkSize"],
+			Threads = PipelineConfig["Threads"],
+			Filtering = 'no')
+		AnnoFit(
+			InputTSV = f + ".anno.tsv",
+			OutputXLSX = f + ".FILTERED.xlsx",
+			HGMD = PipelineConfig["HGMDPath"],
+			AnnovarFolder = PipelineConfig["AnnovarFolder"],
+			AnnoFitConfigFile = PipelineConfig["AnnoFitConfig"],
+			Logger = Logger,
+			ChunkSize = PipelineConfig["AnnofitChunkSize"],
+			Threads = PipelineConfig["Threads"])

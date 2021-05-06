@@ -143,7 +143,7 @@ def SimpleSubprocess(
 			f"Details: {Stderr.decode('utf-8')}"
 			]
 		for line in ErrorMessages: Logger.error(line)
-		raise OSError(f"{ErrorMessages[0]}\n{ErrorMessage[2]}")
+		raise OSError(f"{ErrorMessages[0]}\n{ErrorMessages[2]}")
 	if Shell.returncode in AllowedCodes: Logger.warning(f"Command '{Name}' has returned ALLOWED non-zero exit code [{str(Shell.returncode)}]")
 	
 	# Timestamp
